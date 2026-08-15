@@ -1,0 +1,16 @@
+# Datasets: provided by KLA, never committed. train.zip alone is 919 MB.
+data/
+*.zip
+NoisyLR/
+KLA_Problem*.pdf
+*.pptx
+!solution_presentation.pptx
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Checkpoints: every epoch writes one. Only the submitted model is tracked.
+weights/*.pt
+!weights/model.pt
