@@ -4,14 +4,15 @@
   "blocks": 24,
   "scale": 2,
   "res_scale": 0.1,
-  "patch": 64,
-  "batch_size": 32,
-  "lr": 2e-4,
+  "patch": 0,
+  "batch_size": 8,
+  "lr": 0.0002,
   "epochs": 300,
   "overfit_epochs": 300,
   "p_synth": 0.5,
   "edge_weight": 0.0,
   "amp": true,
   "workers": 4,
-  "seed": 0
+  "seed": 0,
+  "_patch_note": "patch 0 = full image. Measured receptive field is 72 px (16 blocks) / 104 px (24 blocks); a 64 px crop is smaller than that, so cropped training would feed the network zero-padding it never sees at inference."
 }

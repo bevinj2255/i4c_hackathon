@@ -106,7 +106,32 @@ Tolerance is 15%; `verify_degradation.py` aborts outside it. See
 | dihedral TTA | `undihedral(dihedral(x,k),k) == x` for all 8 k, all 8 distinct | pass, on non-square input |
 | `inference.py` | end-to-end, output contract enforced | pass on 20 test images (CPU) |
 
-### 3.1 The overfit gate, and why its criterion changed
+### 3.1 Receptive field — why training patches were dropped
+
+Measured empirically (which input pixels carry nonzero gradient to one output pixel,
+with all-positive weights so no path cancels):
+
+| Blocks | Measured receptive field |
+|---|---|
+| 8 | 40 input px |
+| **16 (base)** | **72 input px** |
+| 24 (large) | 104 input px |
+
+The original plan trained on random 64×64 crops. **The receptive field is larger than
+that crop.** Every output pixel's context would have been clipped by the patch boundary
+and filled with zero padding — padding the network never encounters at inference, where
+images are a full 128×128. That is a train/test mismatch built straight into the data
+loader.
+
+Changed to `patch: 0` (whole 128×128 image). Both configs' receptive fields fit inside
+128 px. Cropping bought nothing anyway: augmentation diversity already comes from the
+8 dihedral transforms and a fresh noise draw every epoch.
+
+Alignment re-verified on the real (noisy) pairs, where an exact match is impossible:
+zero-shift correlation between `area_downsample(GT)` and `NoisyLR` beats all 8
+one-pixel-shifted alternatives by ≥ 0.0226, with and without augmentation.
+
+### 3.2 The overfit gate, and why its criterion changed
 
 First attempt asserted training loss < 0.01 on a fixed pair. **It failed, twice, on a
 healthy pipeline.**
