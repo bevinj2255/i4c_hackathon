@@ -13,3 +13,6 @@ epoch    6/110  loss 0.03920  val PSNR 27.539 dB  lr 1.99e-04  200s
 epoch    7/110  loss 0.03846  val PSNR 27.259 dB  lr 1.98e-04  180s
 epoch    8/110  loss 0.03817  val PSNR 27.811 dB  lr 1.97e-04  178s
 epoch    9/110  loss 0.03804  val PSNR 27.837 dB  lr 1.97e-04  179s
+epoch   10/110  loss 0.03760  val PSNR 27.900 dB  lr 1.96e-04  176s
+epoch   11/110  loss 0.03762  val PSNR 27.800 dB  lr 1.95e-04  175s
+epoch   12/110  loss 0.03749  val PSNR 27.949 dB  lr 1.94e-04  179s

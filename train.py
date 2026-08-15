@@ -150,7 +150,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/base.json")
     ap.add_argument("--data", default="data/train")
-    ap.add_argument("--resume", default=None)
+    ap.add_argument("--resume", default=None,
+                    help="continue a run: restores weights, optimiser, schedule, epoch")
+    ap.add_argument("--init_from", default=None,
+                    help="start a NEW run from these weights only (fine-tuning). "
+                         "Optimiser and schedule start fresh.")
     ap.add_argument("--overfit", type=int, default=0,
                     help="overfit this many images as a pipeline sanity check")
     ap.add_argument("--benchmark", action="store_true")
@@ -201,7 +205,8 @@ def main():
         train_set = RestorationDataset(train_names, gt_dir, lr_dir,
                                        patch=cfg["patch"], scale=cfg["scale"],
                                        p_synth=cfg.get("p_synth", 0.5),
-                                       augment=True, seed=cfg["seed"])
+                                       augment=True, seed=cfg["seed"],
+                                       p_pattern=cfg.get("p_pattern", 0.0))
 
     workers = cfg.get("workers", 0)
     train_loader = DataLoader(train_set, batch_size=cfg["batch_size"], shuffle=True,
@@ -222,6 +227,15 @@ def main():
 
     first_loss = None
     start_epoch, best = 0, -1.0
+    if a.init_from:
+        # Weights only. A fine-tune wants a fresh optimiser and a fresh cosine over its
+        # own (short) schedule; restoring the old scheduler would resume at a decayed
+        # learning rate and the run would barely move.
+        src = torch.load(a.init_from, map_location="cpu", weights_only=False)
+        model.load_state_dict(src["model"])
+        print(f"Initialised weights from {a.init_from} "
+              f"(epoch {src.get('epoch', '?')}, best val {src.get('best', float('nan')):.3f} dB); "
+              f"optimiser and schedule start fresh")
     if a.resume and Path(a.resume).exists():
         ck = torch.load(a.resume, map_location=device)
         model.load_state_dict(ck["model"]); opt.load_state_dict(ck["opt"])

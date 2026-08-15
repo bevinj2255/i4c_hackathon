@@ -31,6 +31,7 @@ import torch
 from torch.utils.data import Dataset
 
 from .degrade import synthesize
+from .patterns import random_pattern
 
 VAL_COUNT = 200
 SPLIT_SEED = 0
@@ -59,11 +60,15 @@ def dihedral(arr, k):
 
 class RestorationDataset(Dataset):
     def __init__(self, names, gt_dir, lr_dir, patch=64, scale=2,
-                 p_synth=0.5, augment=True, seed=0):
+                 p_synth=0.5, augment=True, seed=0, p_pattern=0.0):
         self.names = list(names)
         self.gt_dir, self.lr_dir = Path(gt_dir), Path(lr_dir)
         self.patch, self.scale = patch, scale
         self.p_synth, self.augment = p_synth, augment
+        # Probability of replacing the ground truth with randomised synthetic
+        # structure (gratings, contact arrays, edges). Defaults to 0: this is an
+        # experiment, measured before it is trusted. See src/patterns.py.
+        self.p_pattern = p_pattern
         # One generator per dataset instance. With persistent workers this advances
         # across epochs, so every epoch sees different noise while the run as a whole
         # stays reproducible from `seed`.
@@ -74,13 +79,19 @@ class RestorationDataset(Dataset):
 
     def __getitem__(self, i):
         name = self.names[i]
-        gt = np.load(self.gt_dir / name)
+        use_pattern = self.rng.random() < self.p_pattern
+        if use_pattern:
+            gt = random_pattern(self.rng, 2 * 128)
+        else:
+            gt = np.load(self.gt_dir / name)
 
         if self.augment:
             k = int(self.rng.integers(0, 8))
             gt = np.ascontiguousarray(dihedral(gt, k))
 
-        if self.rng.random() < self.p_synth:
+        # A synthetic pattern has no real NoisyLR partner, so it must go through
+        # the simulator -- which is exactly why the simulator had to be verified.
+        if use_pattern or self.rng.random() < self.p_synth:
             lr, _, _ = synthesize(gt, self.rng, self.scale)
         else:
             lr = np.load(self.lr_dir / name)
