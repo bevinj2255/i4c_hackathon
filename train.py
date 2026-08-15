@@ -99,7 +99,9 @@ def benchmark(model, cfg, device, amp, seconds=30):
     opt = torch.optim.Adam(model.parameters(), lr=cfg["lr"])
     scaler = torch.amp.GradScaler("cuda", enabled=amp)
     loss_fn = make_loss(cfg)
-    p, s, b = cfg["patch"], cfg["scale"], cfg["batch_size"]
+    # patch 0 means "train on whole images", which for this dataset is 128x128.
+    p = cfg["patch"] or 128
+    s, b = cfg["scale"], cfg["batch_size"]
     lr_t = torch.randn(b, 1, p, p, device=device)
     gt_t = torch.rand(b, 1, p * s, p * s, device=device)
 
