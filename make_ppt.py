@@ -31,6 +31,17 @@ def load_metrics():
     return json.loads(p.read_text())["results"] if p.exists() else {}
 
 
+def load_ood():
+    p = Path("results/ood_metrics.json")
+    if not p.exists():
+        return None
+    d = json.loads(p.read_text())
+    gains = [v["psnr_gain"] for v in d["patterns"].values()]
+    return {"n": len(gains), "mean": d["mean_psnr_gain"],
+            "wins": sum(1 for g in gains if g > 0),
+            "best": max(gains), "worst": min(gains)}
+
+
 def load_training():
     logs = [p for p in Path("results").glob("*_log.csv") if p.stem != "smoke_log"]
     if not logs:
@@ -94,7 +105,7 @@ def main():
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
 
-    m, tr = load_metrics(), load_training()
+    m, tr, ood = load_metrics(), load_training(), load_ood()
     prs = Presentation()
     prs.slide_width, prs.slide_height = Inches(13.333), Inches(7.5)
 
@@ -206,7 +217,15 @@ def main():
         "fine detail the inspection task needs.",
         "Optional edge/gradient term, evaluated as a separate one-variable experiment "
         "rather than stacked in by assumption.",
-        f"Adam, lr 2e-4, cosine decay, AMP fp16, batch 16, 64x64 crops. {tr_line}.",
+        f"Adam, lr 2e-4, cosine decay, batch 12, FULL 128x128 images (not crops). "
+        f"{tr_line}.",
+        "Two settings were measured rather than assumed, and both flipped the default:",
+        "  fp32 beats AMP fp16 by 5x on this GPU (20.1 vs 4.0 img/s). The GTX 16-series "
+        "has no tensor cores, so autocast is pure overhead. Measuring it turned 29 "
+        "epochs into 110.",
+        "  Training crops were dropped: the measured receptive field is 72 px, larger "
+        "than the 64 px crop planned, so cropped training would have fed the network "
+        "zero-padding it never sees at inference.",
         "Validation: 200 images held out by fixed seed, never trained on, sole basis "
         "for model selection.",
         "Hygiene measures that are actually enforced in code, not just documented:",
@@ -232,6 +251,10 @@ def main():
         "An untrained network of identical shape is evaluated as a control, so the "
         "metrics are demonstrably measuring training and not architecture alone.",
         "evaluate.py REFUSES to pass a checkpoint that does not beat the bicubic baseline.",
+        (f"Out-of-distribution probe ({ood['n']} synthetic semiconductor-like patterns, "
+         f"absent from training): mean {ood['mean']:+.2f} dB vs bicubic, ahead on "
+         f"{ood['wins']}/{ood['n']}, best {ood['best']:+.2f} dB."
+         if ood else "Out-of-distribution probe: run ood_check.py"),
     ], image=FIG / "training_curve.png")
 
     # 8 -----------------------------------------------------------------------
