@@ -64,6 +64,8 @@ def main():
     ap.add_argument("--data", default="data/train")
     ap.add_argument("--weights", default=None)
     ap.add_argument("--tta", action="store_true")
+    ap.add_argument("--no_lpips", action="store_true",
+                    help="skip LPIPS (needs torchvision); PSNR/SSIM only")
     ap.add_argument("--limit", type=int, default=None, help="use fewer val images (dev only)")
     ap.add_argument("--out", default="results/metrics.json")
     a = ap.parse_args()
@@ -78,8 +80,9 @@ def main():
     print(f"Validation: {len(val_names)} held-out images, device {device}\n")
 
     rows = {}
+    use_lpips = not a.no_lpips
     rows["bicubic x2 (baseline)"] = summarise(
-        [bicubic_upscale(l) for l in lrs], gts, device)
+        [bicubic_upscale(l) for l in lrs], gts, device, with_lpips=use_lpips)
 
     if a.weights:
         try:
@@ -91,10 +94,12 @@ def main():
         model.load_state_dict(ck["model"])
         scale = cfg.get("scale", 2)
         label = f"RestoreNet ({model.n_params():,} params)"
-        rows[label] = summarise(run_model(model, lrs, device, scale), gts, device)
+        rows[label] = summarise(run_model(model, lrs, device, scale), gts, device,
+                                with_lpips=use_lpips)
         if a.tta:
             rows[label + " + 8x TTA"] = summarise(
-                run_model(model, lrs, device, scale, tta=True), gts, device)
+                run_model(model, lrs, device, scale, tta=True), gts, device,
+                with_lpips=use_lpips)
 
         # A metric that cannot get worse is not measuring anything: a randomly
         # initialised network of the same shape must score clearly below the trained one.
@@ -105,8 +110,8 @@ def main():
     print(f"{'method':<34}{'PSNR (dB)':>11}{'SSIM':>9}{'LPIPS':>9}")
     print("-" * 63)
     for k, v in rows.items():
-        lp = f"{v['lpips']:.4f}" if "lpips" in v else "     -"
-        print(f"{k:<34}{v['psnr']:>11.3f}{v['ssim']:>9.4f}{lp:>9}")
+        cell = f"{v['lpips']:.4f}" if "lpips" in v else "     -"
+        print(f"{k:<34}{v['psnr']:>11.3f}{v['ssim']:>9.4f}{cell:>9}")
 
     if a.weights:
         base, best = rows["bicubic x2 (baseline)"], rows[label]
@@ -114,10 +119,12 @@ def main():
             raise SystemExit(
                 f"ABORT: model PSNR {best['psnr']:.3f} does not beat the bicubic "
                 f"baseline {base['psnr']:.3f} -- do not ship this checkpoint")
-        print(f"\nCHECK: model beats bicubic baseline by "
-              f"{best['psnr'] - base['psnr']:.3f} dB PSNR, "
-              f"{best['ssim'] - base['ssim']:+.4f} SSIM, "
-              f"{best['lpips'] - base['lpips']:+.4f} LPIPS")
+        msg = (f"\nCHECK: model beats bicubic baseline by "
+               f"{best['psnr'] - base['psnr']:.3f} dB PSNR, "
+               f"{best['ssim'] - base['ssim']:+.4f} SSIM")
+        if "lpips" in best and "lpips" in base:
+            msg += f", {base['lpips'] - best['lpips']:+.4f} LPIPS (lower is better)"
+        print(msg)
 
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(
