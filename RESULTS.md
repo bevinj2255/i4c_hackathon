@@ -251,6 +251,49 @@ looked like progress — and it took the missing partial file to settle it.
 
 ---
 
+## 4.2 Throughput sweep — fp16 was 5× SLOWER than fp32
+
+Measured on the GTX 1650, real training steps (forward + backward + optimiser), full
+128×128 images, 15 s per point after cuDNN warm-up.
+
+| Configuration | img/s | Peak GiB | min/epoch |
+|---|---|---|---|
+| 64ch/16blk, batch 8, **AMP fp16** | 4.0 | 2.60 | 12.4 |
+| 64ch/16blk, batch 8, **fp32** | **20.1** | 2.34 | **2.5** |
+| 64ch/16blk, batch 8, fp32 + channels_last | 15.6 | 2.40 | 3.2 |
+
+**AMP fp16 is 5× slower than fp32 on this card.** The GTX 16-series (Turing TU117) has
+no tensor cores, so autocast buys nothing and costs conversion overhead plus worse cuDNN
+kernel selection. `channels_last` also loses, for the same reason — it is a layout for
+tensor cores that aren't there.
+
+This is card-specific and must be re-measured elsewhere: on a T4/A100/H100 `amp: true`
+will very likely win. `configs/large.json` keeps AMP on for that reason, with a note to
+benchmark first.
+
+Had this not been measured, the overnight run would have completed **29 epochs instead
+of 110**.
+
+### Capacity vs epochs (all fp32)
+
+| Configuration | img/s | Peak GiB | Epochs in 5.5 h |
+|---|---|---|---|
+| **64ch/16blk, batch 12** | **20.1** | **2.55** | **~133** |
+| 64ch/16blk, batch 16 | 20.6 | 2.90 | 136 |
+| 64ch/24blk, batch 8 | 14.0 | 2.12 | 92 |
+| 96ch/16blk, batch 8 | 10.0 | 2.65 | 66 |
+| 96ch/24blk, batch 8 | 7.1 | 3.16 | 47 |
+| 128ch/16blk, batch 8 | 6.3 | 2.94 | 42 |
+
+Chose 64ch/16blk at batch 12: batch 16 is marginally faster but 2.90 GiB of 4.00 GiB is
+uncomfortable headroom on a card that is also driving the display. Larger models cost
+more epochs than the extra capacity is worth in a single overnight run, and a leaner
+model also scores better on KLA's throughput axis.
+
+**Synthetic benchmark 149 s/epoch vs real 191 s/epoch.** The gap is data loading and the
+200-image validation pass, neither of which the synthetic benchmark includes. Run length
+was sized from the real number.
+
 ## 5. Training runs
 
 _Populated as runs complete. Each row records config, hardware, epochs, wall clock and
