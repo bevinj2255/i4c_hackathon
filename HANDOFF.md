@@ -101,6 +101,43 @@ baseline, so a bad run cannot quietly become the submission.
 
 ---
 
+## FINALISE — the exact steps to produce a submittable repo
+
+One command rebuilds every deliverable from a checkpoint and **aborts if any of KLA's
+eight mandatory pieces is missing**:
+
+```bash
+python package_submission.py --checkpoint weights/base_best.pt \
+    --team "YourTeam" --members "A (lead), B, C" --college "..." --contact "..."
+```
+
+Add `--device cpu` if a training run is still using the GPU. Drop `--skip_tta` to also
+measure the 8× self-ensemble.
+
+That produces: `weights/model.pt`, `results/metrics.json`, `results/restored_test/` (397
+images), `results/figures/*`, updated README tables, and
+`results/<Team>_KLA_PS01.pptx`.
+
+Then, and only then, commit the restored outputs (they are gitignored during
+development so each repackage doesn't add another 100 MB to history):
+
+```bash
+# remove the results/restored_test/ line from .gitignore first
+git add -A && git commit -m "Final submission: restored test outputs and metrics"
+git push
+```
+
+Last, export the .pptx to PDF and rename it `<Team>_KLA_PS01.pdf` for the portal.
+
+**Before submitting, dry-run the reviewer's path in a clean checkout** — this is the one
+that decides whether the submission can be scored at all:
+
+```bash
+git clone <repo> /tmp/check && cd /tmp/check
+pip install -r requirements.txt
+python inference.py --input_dir <some degraded npy dir> --output_dir /tmp/out
+```
+
 ## Things that will bite you if nobody tells you
 
 1. **Test filenames collide with train filenames.** All 397 test files share names with
