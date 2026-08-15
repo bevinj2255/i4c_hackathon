@@ -5,14 +5,17 @@
   "scale": 2,
   "res_scale": 0.1,
   "patch": 0,
-  "batch_size": 8,
+  "batch_size": 12,
   "lr": 0.0002,
-  "epochs": 200,
+  "epochs": 110,
   "overfit_epochs": 300,
   "p_synth": 0.5,
   "edge_weight": 0.0,
-  "amp": true,
+  "amp": false,
   "workers": 0,
   "seed": 0,
-  "_patch_note": "patch 0 = full image. Measured receptive field is 72 px (16 blocks) / 104 px (24 blocks); a 64 px crop is smaller than that, so cropped training would feed the network zero-padding it never sees at inference."
+  "_patch_note": "patch 0 = full image. Measured receptive field is 72 px (16 blocks) / 104 px (24 blocks); a 64 px crop is smaller than that, so cropped training would feed the network zero-padding it never sees at inference.",
+  "_amp_note": "amp:false is MEASURED, not an oversight. On this GTX 1650 (Turing TU117, no tensor cores) fp16 autocast is 5x SLOWER than fp32: 4.0 img/s vs 20.1 img/s. On a GPU with tensor cores (T4, A100, H100) re-benchmark -- amp:true will very likely win there.",
+  "_bench_note": "fp32 sweep on GTX 1650, full 128x128 images: 64ch/16blk 20.1 img/s (2.34 GiB) | 64ch/24blk 14.0 | 96ch/16blk 10.0 | 96ch/24blk 7.1. channels_last was slower (15.6). Bigger models cost more epochs than the capacity is worth in one overnight run.",
+  "_epoch_note": "110 epochs = MEASURED 191 s/epoch (fp32, batch 12, incl. data loading and 200-image validation) x 110 = 5.8 h, sized to the overnight window so the cosine schedule anneals over exactly the run. A half-annealed cosine ships a worse model than a shorter schedule run to completion."
 }

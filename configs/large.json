@@ -5,14 +5,15 @@
   "scale": 2,
   "res_scale": 0.1,
   "patch": 0,
-  "batch_size": 8,
+  "batch_size": 16,
   "lr": 0.0002,
-  "epochs": 300,
+  "epochs": 200,
   "overfit_epochs": 300,
   "p_synth": 0.5,
   "edge_weight": 0.0,
   "amp": true,
   "workers": 4,
   "seed": 0,
-  "_patch_note": "patch 0 = full image. Measured receptive field is 72 px (16 blocks) / 104 px (24 blocks); a 64 px crop is smaller than that, so cropped training would feed the network zero-padding it never sees at inference."
+  "_patch_note": "patch 0 = full image. Measured receptive field is 72 px (16 blocks) / 104 px (24 blocks); a 64 px crop is smaller than that, so cropped training would feed the network zero-padding it never sees at inference.",
+  "_amp_note": "amp:true assumes a GPU with tensor cores. Benchmark first: python train.py --config configs/large.json --benchmark"
 }
