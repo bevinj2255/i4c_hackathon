@@ -261,7 +261,7 @@ def main():
     out = Path(a.out or f"results/{a.team.replace(' ', '')}_KLA_PS01.pptx")
     out.parent.mkdir(parents=True, exist_ok=True)
     prs.save(out)
-    print(f"CHECK: wrote {out} ({len(prs.slides.__iter__.__self__._sldIdLst)} slides)")
+    print(f"CHECK: wrote {out} ({len(prs.slides)} slides)")
     missing = [k for k in ("bicubic", "RestoreNet") if fmt(m, k, "psnr") == "TBD"]
     if missing:
         print(f"NOTE: metrics still TBD for {missing} -- run evaluate.py, then rerun this.")
