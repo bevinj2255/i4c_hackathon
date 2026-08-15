@@ -1,0 +1,7 @@
+# A CRLF slip can make an untouched file look entirely rewritten in a diff.
+* text=auto eol=lf
+*.npy binary
+*.pt binary
+*.png binary
+*.pdf binary
+*.pptx binary

@@ -1,0 +1,17 @@
+{
+  "name": "large",
+  "channels": 96,
+  "blocks": 24,
+  "scale": 2,
+  "res_scale": 0.1,
+  "patch": 64,
+  "batch_size": 32,
+  "lr": 2e-4,
+  "epochs": 300,
+  "overfit_epochs": 300,
+  "p_synth": 0.5,
+  "edge_weight": 0.0,
+  "amp": true,
+  "workers": 4,
+  "seed": 0
+}

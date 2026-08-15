@@ -1,0 +1,22 @@
+# Portable install. On Linux (including the H100 benchmark box) plain PyPI torch
+# ships with CUDA, so this is all that is needed:
+#
+#     pip install -r requirements.txt
+#
+# On Windows, PyPI torch is CPU-only. Get a CUDA build from the PyTorch index first:
+#
+#     pip install torch==2.9.1 torchvision --index-url https://download.pytorch.org/whl/cu128
+#
+# requirements-freeze.txt holds the exact pinned versions of the training environment.
+
+torch>=2.9
+torchvision>=0.24
+numpy>=1.24
+
+# Metrics only -- not used by the model or the inference path.
+scikit-image>=0.22
+lpips>=0.1.4
+
+# Figures and the submission deck.
+matplotlib>=3.7
+python-pptx>=0.6
