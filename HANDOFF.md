@@ -47,6 +47,26 @@ python train.py --config configs/large.json
 Training is **resumable** — if it dies, rerun with
 `--resume weights/large_last.pt`. It checkpoints every epoch, so a crash costs one epoch.
 
+## Benchmark AMP before trusting it — it is not a free win
+
+On the GTX 1650 this project was developed on, **fp16 autocast measured 5× SLOWER than
+fp32** (4.0 vs 20.1 img/s). The GTX 16-series has no tensor cores, so autocast only adds
+conversion overhead and worse cuDNN kernel choices. `channels_last` lost for the same
+reason. `configs/base.json` therefore sets `"amp": false`.
+
+**Your GPU almost certainly reverses this.** Anything with tensor cores — T4, RTX 20xx
+and up, A100, H100 — should be much faster with `"amp": true`, which is what
+`configs/large.json` sets. Confirm it rather than assume:
+
+```bash
+python train.py --config configs/large.json --benchmark      # amp true
+# then flip "amp" to false in the config and run it again; keep the faster one
+```
+
+The `--benchmark` numbers come from short bursts and will overstate sustained throughput
+on a thermally-limited laptop GPU. Trust the per-epoch time printed by the real run when
+you size the epoch count.
+
 ## Which config
 
 | Config | Channels × blocks | Params | Use when |

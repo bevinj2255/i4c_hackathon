@@ -1,1 +1,2 @@
 epoch,train_loss,val_psnr,lr,seconds
+1,0.050584,26.3511,2.000e-04,179.6
