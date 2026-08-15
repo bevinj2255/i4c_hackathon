@@ -4,14 +4,18 @@ This exists because a comment saying "the downsampling is area-mean" does not st
 anyone training against the wrong operator. This script re-derives every constant in
 src/degrade.py straight from the provided pairs and fails loudly on disagreement.
 
-Three independent checks:
+Five independent checks:
   1. The downsampling operator: area-mean must leave a smaller residual than either
      subsampling phase. If it does not, our forward model is wrong.
   2. Noise structure: residual variance must rise linearly with pixel^2 (speckle) off
-     a small positive intercept (gaussian), and the residual must be spatially white
-     (noise applied after downsampling, not before).
-  3. Round trip: synthesizing with src/degrade.py and re-fitting must land on the same
-     noise statistics as the real data.
+     a small positive intercept (gaussian).
+  3. Order: the residual must be near-white, which places the noise after the
+     downsample rather than before it.
+  4. Round trip: synthesizing with src/degrade.py and re-fitting must land on the same
+     noise variances as the real data.
+  5. Spectrum: matching variance is NOT sufficient -- two noise fields can share a
+     variance and differ completely in spectrum. Checked separately after a 16%
+     high-frequency excess survived every variance test.
 
     python verify_degradation.py [--n 60]
 """
@@ -22,7 +26,8 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
-from src.degrade import (SIGMA_GAUSS_MEASURED, SIGMA_SPECKLE_MEASURED, add_noise,
+from src.degrade import (COLOUR_MEASURED, SIGMA_GAUSS_MEASURED, SIGMA_SPECKLE_MEASURED,
+                         add_noise,
                          area_downsample, fit_noise_levels, synthesize)
 
 TOL = 0.15  # 15% relative agreement between real and synthetic noise variances
@@ -119,8 +124,8 @@ def main():
     if max(abs(lag_h), abs(lag_v)) > 0.15:
         fail(f"residual is spatially correlated (lag-1 {lag_h:.3f}/{lag_v:.3f}) -- "
              f"noise was applied BEFORE downsampling, our model has the order wrong")
-    ok(f"residual is spatially white (lag-1 {lag_h:+.4f} horiz, {lag_v:+.4f} vert) "
-       f"=> noise applied after downsampling")
+    ok(f"residual is near-white (lag-1 {lag_h:+.4f} horiz, {lag_v:+.4f} vert) "
+       f"=> noise applied after downsampling, not before")
 
     # --- 3. per-image spread vs the constants in degrade.py ----------------------
     fits = [fit_noise_levels(gt, lr) for gt, lr in pairs]
@@ -151,6 +156,34 @@ def main():
                  f"reproducing the real degradation")
         ok(f"synthetic {label} {syn:.6f} matches real {real:.6f} "
            f"({rel:.1%} apart, tolerance {TOL:.0%})")
+
+    # --- 5. spectrum: variance agreement is not enough -------------------------
+    # Two noise fields can have identical variance and completely different spectra.
+    # Matching only the variance let a 16% high-frequency excess go unnoticed until
+    # the power spectra were compared, so the autocorrelation is now checked too.
+    def lag1(r):
+        rz = (r - r.mean()) / r.std()
+        return (float((rz[:, :-1] * rz[:, 1:]).mean()),
+                float((rz[1:] * rz[:-1]).mean()))
+
+    crng = np.random.default_rng(3)
+    # Deliberately not named sv/gv: those already hold the fitted variances above,
+    # and reusing them here would work only by accident of ordering.
+    real_h = real_v = sim_h = sim_v = 0.0
+    sub = pairs[:20]
+    for gt, lr in sub:
+        s, g = fit_noise_levels(gt, lr)
+        x = area_downsample(gt)
+        a, b = lag1(lr - x); real_h += a / len(sub); real_v += b / len(sub)
+        c, d = lag1(add_noise(x, s, g, crng, COLOUR_MEASURED) - x)
+        sim_h += c / len(sub); sim_v += d / len(sub)
+    print(f"    lag-1 autocorrelation  real: h={real_h:+.4f} v={real_v:+.4f}   "
+          f"simulated: h={sim_h:+.4f} v={sim_v:+.4f}")
+    if abs(sim_h - real_h) > 0.03 or abs(sim_v - real_v) > 0.03:
+        fail(f"noise spectrum mismatch: real lag-1 ({real_h:+.4f},{real_v:+.4f}) vs "
+             f"simulated ({sim_h:+.4f},{sim_v:+.4f}). COLOUR_MEASURED in "
+             f"src/degrade.py needs revisiting.")
+    ok(f"noise spectrum matches: simulated lag-1 within 0.03 of real on both axes")
 
     # sanity: the simulator's own sampling range must actually cover the real data
     _, s_drawn, g_drawn = synthesize(pairs[0][0], np.random.default_rng(2))

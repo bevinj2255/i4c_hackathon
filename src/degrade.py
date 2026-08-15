@@ -10,10 +10,22 @@ We recovered them from the 3200 provided (GT, NoisyLR) pairs:
      (0.00065 vs 0.0018 / 0.0021). Area-mean is the only one that leaves a
      residual consistent with pure noise.
 
-  2. NOISE IS APPLIED AFTER DOWNSAMPLING, not before. The residual at the
-     low-resolution grid is spatially white (lag-1 correlation -0.029 horizontal,
-     -0.036 vertical). Noise added at 256x256 and then block-averaged would not
-     leave this variance structure.
+  2. NOISE IS APPLIED AFTER DOWNSAMPLING, not before, and is very nearly white.
+     The residual at the low-resolution grid has lag-1 autocorrelation -0.045
+     horizontal, -0.060 vertical. Noise injected before a downsample overshoots
+     badly on this statistic: measured -0.153 for noise added at 256x256 then
+     bicubic-downsampled, +0.159 with antialiasing, versus ~0.000 for noise added
+     after an area downsample. The true value sits close to the after-downsample
+     case, so that is the mechanism.
+
+     The small residual blueness is real, not a measurement artefact: the same
+     statistic on synthetic data whose noise IS white by construction returns
+     -0.003 and -0.000. Real data therefore carried ~16% more high-frequency
+     power than a white simulator produced. `_colour()` closes most of that gap
+     (ratio 1.159 -> 1.071) by matching the measured autocorrelation directly.
+     What remains is anisotropy -- the real noise is bluer vertically than
+     horizontally -- which an isotropic filter cannot represent, and which the
+     randomised COLOUR_RANGE brackets rather than models.
 
   3. SPECKLE is multiplicative. Regressing residual^2 on pixel^2 over 10 value
      bins gives a straight line through a small positive intercept:
@@ -39,6 +51,7 @@ verify_degradation.py re-derives these numbers from the data and aborts if this
 module has drifted away from them.
 """
 import numpy as np
+from scipy.ndimage import convolve1d
 
 # Measured per-image spread, then widened for out-of-distribution robustness.
 # The measured range grew when the sample grew (30 pairs said sigma_s topped out at
@@ -49,6 +62,12 @@ SIGMA_GAUSS_MEASURED = (0.000, 0.149)
 SIGMA_SPECKLE_RANGE = (0.07, 0.28)
 SIGMA_GAUSS_RANGE = (0.00, 0.18)
 
+# Spectral colouring of the noise. a=0.0225 reproduces the measured lag-1
+# autocorrelation of -0.045; the training range brackets it on both sides so the
+# model sees white through to bluer-than-measured noise.
+COLOUR_MEASURED = 0.0225
+COLOUR_RANGE = (0.0, 0.045)
+
 
 def area_downsample(hr, factor=2):
     """Average each disjoint factor x factor block. This is the measured operator."""
@@ -58,21 +77,51 @@ def area_downsample(hr, factor=2):
     return hr.reshape(h // factor, factor, w // factor, factor).mean(axis=(1, 3))
 
 
-def add_noise(lr, sigma_s, sigma_g, rng):
-    """y = x + x*N(0,sigma_s^2) + N(0,sigma_g^2).
+def _colour(noise, a):
+    """Give a white noise field a slightly blue (negatively correlated) spectrum.
+
+    Measured: the real residual has lag-1 spatial autocorrelation about -0.045
+    horizontally and -0.060 vertically, while noise generated white gives -0.003
+    and -0.000 on the same measurement. So the real noise is faintly blue and a
+    white simulator does not reproduce it -- real data carries ~15% more
+    high-frequency power than our synthetic did.
+
+    Rather than guess the mechanism (noise injected before a downsample with
+    negative side-lobes reproduces the sign but overshoots to -0.153), this matches
+    the measured statistic directly with a separable 3-tap filter [-a, 1, -a].
+    For that filter lag-1 = -2a / (1 + 2a^2), so a = 0.0225 lands on -0.045.
+
+    Variance is restored afterwards so `a` changes only the spectrum, never the
+    noise level -- otherwise this knob would silently move the thing sigma controls.
+    """
+    if a <= 0:
+        return noise
+    k = np.array([-a, 1.0, -a], dtype=np.float64)
+    out = convolve1d(noise, k, axis=0, mode="reflect")
+    out = convolve1d(out, k, axis=1, mode="reflect")
+    return out / (1.0 + 2.0 * a * a)
+
+
+def add_noise(lr, sigma_s, sigma_g, rng, colour=0.0):
+    """y = x + x*N(0,sigma_s^2) + N(0,sigma_g^2), optionally spectrally coloured.
 
     Not clipped: NoisyLR genuinely runs outside [0,1] in the provided data and
     KLA calls that "a feature not a bug". Clipping here would train the model on
     inputs it will never actually receive.
+
+    The colouring is applied to the two noise fields before they are combined, not
+    to the finished residual -- filtering `x * n` would drag the image structure
+    into the filter along with the noise.
     """
-    speckle = lr * rng.normal(0.0, sigma_s, lr.shape)
-    gauss = rng.normal(0.0, sigma_g, lr.shape)
-    return (lr + speckle + gauss).astype(np.float32)
+    n_s = _colour(rng.standard_normal(lr.shape), colour) * sigma_s
+    n_g = _colour(rng.standard_normal(lr.shape), colour) * sigma_g
+    return (lr + lr * n_s + n_g).astype(np.float32)
 
 
 def synthesize(gt, rng, factor=2,
                sigma_s_range=SIGMA_SPECKLE_RANGE,
-               sigma_g_range=SIGMA_GAUSS_RANGE):
+               sigma_g_range=SIGMA_GAUSS_RANGE,
+               colour_range=COLOUR_RANGE):
     """Clean high-res image -> degraded low-res image, one fresh random draw.
 
     Used to generate unlimited training pairs from the 3200 clean GT images, so
@@ -80,7 +129,9 @@ def synthesize(gt, rng, factor=2,
     """
     sigma_s = rng.uniform(*sigma_s_range)
     sigma_g = rng.uniform(*sigma_g_range)
-    return add_noise(area_downsample(gt, factor), sigma_s, sigma_g, rng), sigma_s, sigma_g
+    colour = rng.uniform(*colour_range)
+    lr = add_noise(area_downsample(gt, factor), sigma_s, sigma_g, rng, colour)
+    return lr, sigma_s, sigma_g
 
 
 def fit_noise_levels(gt, noisy_lr, factor=2):
