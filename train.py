@@ -13,6 +13,7 @@ Validation is 200 held-out images fixed by seed in src/data.py. They are never
 trained on, and model selection uses only this split.
 """
 import argparse
+import os
 import csv
 import json
 import random
@@ -33,6 +34,21 @@ def set_seed(seed):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+
+
+def save_atomic(obj, path):
+    """Write a checkpoint so no reader can ever see a half-written file.
+
+    Training saves every epoch while other tools (evaluate.py, inference.py,
+    package_submission.py) may be reading the same file. Writing in place gives
+    them a torn file and a deserialisation error that looks like a corrupt model.
+    os.replace is atomic on both Windows and POSIX, so a reader sees either the
+    old checkpoint or the new one, never a mixture.
+    """
+    path = Path(path)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    torch.save(obj, tmp)
+    os.replace(tmp, path)
 
 
 def charbonnier(pred, gt, eps=1e-3):
@@ -245,10 +261,10 @@ def main():
         ck = {"model": model.state_dict(), "opt": opt.state_dict(),
               "sched": sched.state_dict(), "scaler": scaler.state_dict(),
               "epoch": epoch, "best": max(best, val_psnr), "cfg": cfg}
-        torch.save(ck, Path("weights") / f"{name}_last.pt")
+        save_atomic(ck, Path("weights") / f"{name}_last.pt")
         if val_psnr > best:
             best = val_psnr
-            torch.save(ck, Path("weights") / f"{name}_best.pt")
+            save_atomic(ck, Path("weights") / f"{name}_best.pt")
 
     print(f"\nDone. Best val PSNR {best:.3f} dB -> weights/{name}_best.pt")
     if a.overfit:

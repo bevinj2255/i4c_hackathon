@@ -69,6 +69,27 @@ more than 4 GB of VRAM.
 
 ---
 
+## What the training data actually is
+
+Before modelling anything we looked at the images. **The KLA training ground truth is
+generic grayscale natural imagery** — foliage, books, pebbles, buildings, printed text,
+animals — not semiconductor inspection images. See
+`results/figures/dataset_sample.png`.
+
+That reframes the task, and two design decisions follow from it:
+
+- The hidden test set's stated **out-of-distribution half is most likely genuine
+  semiconductor content**, a domain entirely absent from training. So this solution
+  deliberately learns a *content-agnostic local restoration operator* — a 72-pixel
+  receptive field, trained across a wide randomised noise range — rather than priors
+  specific to the training imagery. There is no natural-image prior to exploit that
+  would transfer to a wafer image.
+- Dihedral augmentation is justified by **equivariance of the degradation**, not by the
+  content being orientation-free. Natural photographs plainly have a canonical "up";
+  the reason the augmentation is still valid is that per-pixel noise and 2×2 block
+  averaging commute with rotations and flips, so a rotated image's ideal restoration is
+  exactly the rotated restoration.
+
 ## What makes this approach different: the degradation was reverse-engineered
 
 KLA did not disclose how the images were degraded, only that speckle noise, additive
@@ -143,12 +164,20 @@ _Populated by `python evaluate.py --weights weights/model.pt`; see
 
 | Method | PSNR (dB) | SSIM | LPIPS |
 |---|---|---|---|
-| Bicubic ×2 (baseline) | _pending_ | _pending_ | _pending_ |
-| RestoreNet (ours) | _pending_ | _pending_ | _pending_ |
+| Bicubic ×2 (baseline) | 23.234 | 0.5395 | 0.4369 |
+| RestoreNet (ours) | 26.753 | 0.6537 | 0.3894 |
 | RestoreNet + 8× TTA | _pending_ | _pending_ | _pending_ |
+| Untrained control | 11.447 | 0.1503 | — |
 
-Figures in `results/figures/`: degradation analysis, training curve, successful
-restorations and the worst validation case (picked by PSNR, not by eye).
+Figures in `results/figures/`: dataset sample, degradation analysis, training curve,
+and restoration examples.
+
+Restoration examples are selected by **gain over the bicubic baseline**, not by absolute
+PSNR. Absolute PSNR simply finds the darkest, emptiest frames — on a near-black image
+everything scores ~38 dB and bicubic actually beats the model, which makes a
+flattering-looking figure that demonstrates nothing. `restored_best_*` are the largest
+gains, `restored_median` is the representative case, and `restored_worst_1` is the
+required failure case, chosen by measurement rather than by eye.
 
 ---
 
@@ -186,10 +215,10 @@ python src/degrade.py && python src/model.py && python -m src.data && python src
 
 | | |
 |---|---|
-| Training hardware | _pending_ |
-| Training time | _pending_ |
-| Inference hardware measured | _pending_ |
-| End-to-end runtime | _pending_ (reported by `inference.py`, includes disk read, preprocessing, host↔device transfer, model execution and saving) |
+| Training hardware | NVIDIA GeForce GTX 1650 |
+| Training time | 5 epochs, 0.3 h wall clock |
+| Inference hardware measured | NVIDIA GeForce GTX 1650 |
+| End-to-end runtime | see the timing block printed by `inference.py` (disk read, preprocessing, host↔device transfer, model execution, saving) |
 | Batch size | 16 |
 | Timing method | `time.perf_counter()` with `torch.cuda.synchronize()` around every GPU stage |
 | Seed | 0 (set for `random`, `numpy` and `torch`; recorded in the checkpoint) |

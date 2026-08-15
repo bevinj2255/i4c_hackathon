@@ -12,12 +12,15 @@ end to end is cheap; discovering at the deadline that results/ still holds last 
 numbers is not.
 """
 import argparse
+import csv
 import json
 import re
-import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
+
+import torch
 
 ROOT = Path(__file__).parent
 
@@ -69,6 +72,9 @@ def main():
     ap.add_argument("--contact", default="EMAIL / PHONE")
     ap.add_argument("--skip_tta", action="store_true",
                     help="skip the 8x TTA evaluation (it is slow)")
+    ap.add_argument("--device", default=None,
+                    help="cuda | cpu. Use cpu to avoid competing with a "
+                         "training run for VRAM on a small GPU.")
     a = ap.parse_args()
 
     ck = Path(a.checkpoint)
@@ -76,32 +82,52 @@ def main():
         raise SystemExit(f"ABORT: no checkpoint at {ck}")
 
     # 1. Promote to the stable name inference.py defaults to.
+    #
+    # Loaded and re-saved rather than file-copied. Training rewrites this checkpoint
+    # every epoch, and a plain copy can catch it mid-write -- which is exactly what
+    # happened on the first run here, surfacing as an unrelated-looking CUDA
+    # deserialisation error. Loading first proves the file is complete before it
+    # becomes the submitted model, and the retry covers the narrow window.
     (ROOT / "weights").mkdir(exist_ok=True)
-    shutil.copy2(ck, ROOT / "weights" / "model.pt")
-    print(f"CHECK: {ck.name} -> weights/model.pt")
+    state = None
+    for attempt in range(4):
+        try:
+            state = torch.load(ck, map_location="cpu", weights_only=False)
+            break
+        except Exception as e:
+            if attempt == 3:
+                raise SystemExit(f"ABORT: {ck} will not load after 4 attempts: {e}")
+            print(f"  {ck.name} unreadable (training may be mid-write), retrying: {e}")
+            time.sleep(10)
+    torch.save(state, ROOT / "weights" / "model.pt")
+    print(f"CHECK: {ck.name} (epoch {state.get('epoch', '?')}) verified and copied "
+          f"to weights/model.pt")
 
     # 2. Metrics vs baseline. evaluate.py aborts if the model loses to bicubic.
-    ev = ["evaluate.py", "--weights", "weights/model.pt"]
+    dev = ["--device", a.device] if a.device else []
+    ev = ["evaluate.py", "--weights", "weights/model.pt"] + dev
     if not a.skip_tta:
         ev.append("--tta")
     run(ev, "metrics on held-out validation split")
 
     # 3. Restored outputs for the released test set -- a required deliverable.
     run(["inference.py", "--input_dir", "data/test/NoisyLR",
-         "--output_dir", "results/restored_test"], "restoring the 397 test images")
+         "--output_dir", "results/restored_test"] + dev,
+        "restoring the 397 test images")
 
     # 4. Figures, including the required failure case.
-    run(["make_figures.py", "--weights", "weights/model.pt"], "figures")
+    run(["make_figures.py", "--weights", "weights/model.pt"] + dev, "figures")
 
     # 5. README tables.
     metrics = json.loads((ROOT / "results/metrics.json").read_text())["results"]
-    import torch
-    gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
+    try:
+        gpu = torch.cuda.get_device_name(0)
+    except Exception:
+        gpu = "CPU"
     logs = [p for p in (ROOT / "results").glob("*_log.csv") if p.stem != "smoke_log"]
     epochs = hours = 0
     if logs:
-        import csv as _csv
-        rows = list(_csv.DictReader(max(logs, key=lambda p: p.stat().st_mtime).open()))
+        rows = list(csv.DictReader(max(logs, key=lambda p: p.stat().st_mtime).open()))
         epochs = len(rows)
         hours = sum(float(r["seconds"]) for r in rows) / 3600.0
     fill_readme(metrics, {

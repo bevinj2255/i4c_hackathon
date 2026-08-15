@@ -40,11 +40,24 @@ def list_inputs(input_dir):
     return files
 
 
+def gpu_name():
+    """Device name, or a placeholder. Never raises.
+
+    torch.cuda.get_device_name(0) throws 'Invalid device id' when CUDA reports as
+    available but no device is actually visible (an empty CUDA_VISIBLE_DEVICES does
+    exactly this). Crashing the whole inference run to print a label is absurd.
+    """
+    try:
+        return torch.cuda.get_device_name(0)
+    except Exception:
+        return "unknown GPU"
+
+
 def load_model(weights, device):
     try:
-        ck = torch.load(weights, map_location=device, weights_only=True)
+        ck = torch.load(weights, map_location="cpu", weights_only=True)
     except Exception:
-        ck = torch.load(weights, map_location=device, weights_only=False)
+        ck = torch.load(weights, map_location="cpu", weights_only=False)
     cfg = ck.get("cfg", {})
     model = build(cfg).to(device).eval()
     model.load_state_dict(ck["model"])
@@ -87,8 +100,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     files = list_inputs(a.input_dir)
 
-    print(f"Device : {device}"
-          f"{' (' + torch.cuda.get_device_name(0) + ')' if device.type == 'cuda' else ''}"
+    print(f"Device : {device}{' (' + gpu_name() + ')' if device.type == 'cuda' else ''}"
           f"  half={amp}  tta={a.tta}")
     print(f"Model  : {model.n_params():,} parameters, x{scale}, from {a.weights}")
     print(f"Input  : {len(files)} files from {a.input_dir}")
