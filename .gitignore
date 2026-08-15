@@ -14,3 +14,6 @@ __pycache__/
 # Checkpoints: every epoch writes one. Only the submitted model is tracked.
 weights/*.pt
 !weights/model.pt
+
+# scratch from smoke tests
+results/smoke_log.csv
