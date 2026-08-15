@@ -228,7 +228,7 @@ def main():
                 loss = loss_fn(model(lr_t), gt_t)
             scaler.scale(loss).backward()
             scaler.step(opt); scaler.update(); opt.zero_grad(set_to_none=True)
-            running += float(loss); steps += 1
+            running += float(loss.detach()); steps += 1
         sched.step()
 
         train_loss = running / max(steps, 1)
