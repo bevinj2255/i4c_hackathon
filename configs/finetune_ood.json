@@ -1,0 +1,20 @@
+{
+  "name": "finetune_ood",
+  "channels": 64,
+  "blocks": 16,
+  "scale": 2,
+  "res_scale": 0.1,
+  "patch": 0,
+  "batch_size": 12,
+  "lr": 5e-5,
+  "epochs": 20,
+  "overfit_epochs": 300,
+  "p_synth": 0.5,
+  "p_pattern": 0.25,
+  "edge_weight": 0.0,
+  "amp": false,
+  "workers": 0,
+  "seed": 0,
+  "_purpose": "EXPERIMENT, not the default. Fine-tunes the base checkpoint with 25% randomised synthetic structure (gratings, contact arrays, step edges) mixed into the training targets, to test whether it improves the out-of-distribution half of the score. Launch with --init_from weights/base_best.pt. Ship only if it wins on BOTH evaluate.py (in-distribution val) and ood_check.py; a gain on one at the cost of the other is not a win.",
+  "_lr_note": "5e-5, a quarter of the base run's rate: this is a fine-tune, and a full-rate restart would discard what the 110-epoch run learned."
+}
