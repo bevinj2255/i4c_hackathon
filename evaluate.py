@@ -67,6 +67,7 @@ def main():
     ap.add_argument("--no_lpips", action="store_true",
                     help="skip LPIPS (needs torchvision); PSNR/SSIM only")
     ap.add_argument("--limit", type=int, default=None, help="use fewer val images (dev only)")
+    ap.add_argument("--device", default=None, help="cuda | cpu (default: auto)")
     ap.add_argument("--out", default="results/metrics.json")
     a = ap.parse_args()
 
@@ -76,7 +77,7 @@ def main():
         val_names = val_names[:a.limit]
     gts = [np.load(gt_dir / n) for n in val_names]
     lrs = [np.load(lr_dir / n) for n in val_names]
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(a.device or ("cuda" if torch.cuda.is_available() else "cpu"))
     print(f"Validation: {len(val_names)} held-out images, device {device}\n")
 
     rows = {}
@@ -86,9 +87,9 @@ def main():
 
     if a.weights:
         try:
-            ck = torch.load(a.weights, map_location=device, weights_only=True)
+            ck = torch.load(a.weights, map_location="cpu", weights_only=True)
         except Exception:
-            ck = torch.load(a.weights, map_location=device, weights_only=False)
+            ck = torch.load(a.weights, map_location="cpu", weights_only=False)
         cfg = ck.get("cfg", {})
         model = build(cfg).to(device).eval()
         model.load_state_dict(ck["model"])

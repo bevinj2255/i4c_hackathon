@@ -20,6 +20,34 @@ three different words.
 | Released test inputs | 397 files, **all** (128, 128) float32 | every test array shape-counted |
 | Test ground truth | not provided | KLA retains it for scoring |
 
+### 1.1 What the images actually are — checked, not assumed
+
+**The training ground truth is generic grayscale natural imagery, not semiconductor
+inspection data.** A random sample of 24 (`results/figures/dataset_sample.png`) shows
+foliage, books, water, pebbles, buildings, printed text, animals, wood grain.
+
+| Statistic over 600 GT images | Value |
+|---|---|
+| mean brightness | 0.430 (range 0.039 – 0.932) |
+| contrast (std) | 0.184 (range 0.022 – 0.363) |
+| very dark images (mean < 0.1) | 9 of 600, 2% |
+
+Three consequences, all of which changed decisions:
+
+1. The hidden test set's stated out-of-distribution half is most likely **genuine
+   semiconductor content** — a domain absent from training entirely. This is the
+   argument for keeping the model a content-agnostic *local* operator (72 px receptive
+   field, wide randomised noise range) instead of learning priors tied to natural
+   images, which would not transfer to a wafer image.
+2. The dihedral augmentation justification originally written down ("isotropic
+   semiconductor textures with no canonical up") was **factually wrong** — natural
+   photographs have a canonical up. The augmentation is still valid, but because the
+   degradation and its inverse are *equivariant* under the dihedral group, which is a
+   different argument. Corrected in `src/data.py`, README and the deck.
+3. Figure selection by absolute PSNR is misleading here. The 2% of near-black frames
+   score ~38 dB for any method, and bicubic beats the model on them (39.34 vs 37.80 dB
+   on the top-PSNR image). Selection changed to **gain over the bicubic baseline**.
+
 **Trap (measured, not assumed):** all 397 test filenames also exist in the training set,
 but they are different images — pixel correlation between same-named train/test files is
 −0.006, 0.003, 0.011 on the three checked, and none are byte-identical. The numbering

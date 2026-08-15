@@ -143,6 +143,13 @@ def main():
     slide(prs, "Dataset analysis: we reverse-engineered the degradation", [
         "3200 paired images. GT 256x256 in [0,1]; NoisyLR 128x128, deliberately "
         "outside [0,1].",
+        "First, what the data actually IS: the training ground truth is generic "
+        "grayscale NATURAL imagery - foliage, books, buildings, printed text - not "
+        "semiconductor inspection images. We checked rather than assumed.",
+        "  Consequence: the hidden set's out-of-distribution half is most likely real "
+        "semiconductor content, a domain absent from training. So we deliberately "
+        "learn a content-agnostic local restoration operator rather than priors "
+        "specific to this imagery.",
         "KLA did not disclose the degradation parameters or their order. We recovered "
         "them from the pairs:",
         "  Downsampling is a 2x2 area average - residual std 0.0908, vs 0.1019 and "
@@ -169,8 +176,9 @@ def main():
         "pass is faster and avoids compounding one stage's errors into the next.",
         "5. Clamp output to [0,1] inside the model - KLA does not clip, so out-of-range "
         "pixels are free avoidable error.",
-        "Augmentation: the 8-element dihedral group. Free, and valid because these "
-        "textures have no canonical orientation.",
+        "Augmentation: the 8-element dihedral group - valid because the degradation "
+        "and its inverse are equivariant under it, NOT because the content is "
+        "orientation-free (it is natural imagery, which has a canonical up).",
     ])
 
     # 5 -----------------------------------------------------------------------

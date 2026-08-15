@@ -11,9 +11,18 @@ levels drawn from a range wider than the one we measured.
     the out-of-distribution half of the hidden test set rewards
 
 Geometric augmentation is the 8-element dihedral group (4 rotations x optional flip).
-It is free and valid here: these are isotropic semiconductor textures with no
-canonical up. It commutes with the 2x2 area downsample, so for synthetic samples we
-can rotate the GT first and degrade afterwards and get the same distribution.
+
+A note on why, because the obvious justification is wrong: the training images are
+NOT orientation-free. Inspect them (results/figures/dataset_sample.png) and they turn
+out to be generic grayscale natural photographs -- books, foliage, buildings, printed
+text -- which very much have a canonical "up". The augmentation is still correct, but
+for a different reason: the task is a LOCAL restoration operator, and both the
+degradation (per-pixel noise, block averaging) and its inverse are equivariant under
+the dihedral group. Rotating an image rotates its ideal restoration exactly. So the
+extra orientations are valid training signal even though the content is not isotropic.
+
+It also commutes with the 2x2 area downsample, so for synthetic samples we can rotate
+the GT first and degrade afterwards and get the same distribution.
 """
 from pathlib import Path
 
