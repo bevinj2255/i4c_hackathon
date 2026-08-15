@@ -81,7 +81,65 @@ this structure.
 training sampling ranges therefore carry margin over what was observed: σ_s ∈ [0.07,
 0.28], σ_g ∈ [0.00, 0.18].
 
-### 2.5 Round-trip validation
+### 2.5 The noise spectrum — matching variance was not enough
+
+Variance agreement (below, 0.0%) looked like proof the simulator was right. It was not.
+Comparing **radially-averaged power spectra** of real vs simulated degraded images
+exposed a gap that every variance test had passed straight through:
+
+| | real / simulated high-frequency power |
+|---|---|
+| white noise simulator | **1.1585** |
+
+Real data carried ~16% more high-frequency power. Two noise fields can share a variance
+and have completely different spectra.
+
+**Control run first, before believing it.** The same statistic measured on synthetic data
+whose noise is white *by construction*:
+
+| | lag-1 h | lag-1 v |
+|---|---|---|
+| real residual | −0.0445 | −0.0603 |
+| synthetic, known-white | −0.0032 | −0.0002 |
+
+The control is clean, so the blueness is a property of the real noise, not an artefact of
+how it was measured.
+
+**Mechanism ruled out.** Injecting noise before a downsample reproduces the sign but
+badly overshoots the magnitude:
+
+| Where noise enters | lag-1 h | lag-1 v |
+|---|---|---|
+| after area-downsample (our model) | −0.0023 | +0.0007 |
+| before bicubic downsample | −0.1533 | −0.1551 |
+| before bicubic+antialias downsample | +0.1593 | +0.1569 |
+| **real data** | **−0.0445** | **−0.0603** |
+
+Six downsampling kernels were also tested directly against the real pairs (area, bicubic
+±antialias, bilinear ±antialias, subsample). All left the same negative correlation, so
+the kernel is not the cause; area-mean and bicubic-no-antialias tie within 0.3% on
+residual std, and area-mean was kept.
+
+**Resolution.** Rather than model a mechanism we could not identify, the measured
+statistic is matched directly with a separable 3-tap `[-a, 1, -a]` filter on the noise
+fields, for which lag-1 = −2a/(1+2a²). Variance is renormalised so `a` moves only the
+spectrum.
+
+| a | lag-1 h | lag-1 v | std ratio |
+|---|---|---|---|
+| 0.0000 | −0.0027 | −0.0017 | 1.0000 |
+| **0.0225** | **−0.0456** | **−0.0433** | 0.9992 |
+| 0.0450 | −0.0902 | −0.0914 | 0.9988 |
+
+Result: high-frequency power ratio **1.1585 → 1.0714**. The residual 7% is anisotropy —
+real noise is bluer vertically than horizontally — which an isotropic filter cannot
+represent. `COLOUR_RANGE = (0.0, 0.045)` brackets the measured value rather than pinning
+it, on the same reasoning as the widened σ ranges.
+
+`verify_degradation.py` now checks the autocorrelation as well as the variance, so this
+cannot silently regress.
+
+### 2.6 Round-trip validation
 
 Synthesising with `src/degrade.py` at the per-image fitted σ and re-fitting:
 
