@@ -22,4 +22,3 @@ results/train_stdout.log
 # Restored test outputs: 397 files, ~101 MB. Regenerated from every new checkpoint, so
 # tracking them mid-run puts a fresh 100 MB copy in history each time. Re-enabled and
 # committed ONCE at the end, from the final model (see FINALISE in HANDOFF.md).
-results/restored_test/

@@ -329,7 +329,11 @@ the validation metric it produced._
 
 | Run | Config | Params | Hardware | Epochs | Wall clock | Best val PSNR |
 |---|---|---|---|---|---|---|
-| _pending_ | | | | | | |
+| base | 64ch/16blk, fp32, batch 12, full 128×128 images, p_synth 0.5 | 1,367,553 | GTX 1650 4 GiB | 110 | 5.40 h | **28.533 dB** (epoch 108) |
+
+Progression: 26.35 dB (epoch 1) → 27.90 (10) → 28.13 (20) → 28.25 (40) → 28.43 (60) →
+28.50 (80) → 28.53 (110). Cosine annealed over exactly the run, as sized from the
+measured epoch time.
 
 ## 5.1 Out-of-distribution probe — generalisation improves with training
 
@@ -368,8 +372,45 @@ in-distribution validation split and this probe.
 
 ## 6. Final metrics
 
-_Populated by `evaluate.py` on the 200-image held-out split._
+200-image held-out split, never trained on, sole basis for model selection.
 
-| Method | PSNR (dB) | SSIM | LPIPS |
+| Method | PSNR (dB) | SSIM | LPIPS ↓ |
 |---|---|---|---|
-| _pending_ | | | |
+| Bicubic ×2 (baseline) | 23.234 | 0.5395 | 0.4369 |
+| **RestoreNet (1.37 M params)** | **28.533** | **0.7514** | **0.3297** |
+| RestoreNet + 8× TTA | 28.569 | 0.7525 | 0.3337 |
+| Untrained control (same architecture) | 10.387 | 0.1022 | — |
+
+Gain over baseline: **+5.299 dB PSNR, +0.2119 SSIM, 0.1072 better LPIPS**.
+**Beaten by bicubic on 0 of 200 images** — worst gain +0.55 dB, median +4.65, best +18.71.
+
+The untrained control at 10.387 dB confirms the metrics are measuring training rather
+than architecture alone.
+
+### 6.1 Test-time augmentation — measured, and rejected
+
+| | PSNR | SSIM | LPIPS ↓ | cost |
+|---|---|---|---|---|
+| plain | 28.533 | 0.7514 | **0.3297** | 1× |
+| 8× dihedral TTA | **28.569** | **0.7525** | 0.3337 | 8× |
+
+TTA buys +0.036 dB and +0.0011 SSIM but makes **LPIPS worse**, for eight times the
+compute, on a task that is also scored on throughput. Kept available behind `--tta`,
+not enabled. A negative result worth recording: the obvious upgrade is not one here.
+
+### 6.2 Inference throughput
+
+397 test images, batch 16, GTX 1650, end-to-end (disk read → preprocess → transfer →
+model → transfer → save):
+
+| Precision | ms/image | images/s | model execution |
+|---|---|---|---|
+| fp32 (`--fp32`) | **31.51** | **31.7** | 9.86 s |
+| fp16 (default) | 113.30 | 8.8 | 42.95 s |
+
+Same 5× fp16 penalty as in training, same cause: no tensor cores. fp16 remains the
+default because KLA benchmarks on an H100, where it is the correct choice; `--fp32` is
+documented for hardware without tensor cores.
+
+Non-model stages total 1.07 s of the 12.51 s fp32 run — 8.5%. Worth knowing, since KLA
+counts them and a model fast enough would become I/O bound.
