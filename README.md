@@ -246,13 +246,16 @@ python src/degrade.py && python src/model.py && python -m src.data && python src
 
 | | |
 |---|---|
-| Training hardware | NVIDIA GeForce GTX 1650 |
-| Training time | 25 epochs, 1.4 h wall clock |
-| Inference hardware measured | NVIDIA GeForce GTX 1650 |
-| End-to-end runtime | see the timing block printed by `inference.py` (disk read, preprocessing, host↔device transfer, model execution, saving) |
-| Batch size | 16 |
+| Training hardware | NVIDIA GeForce GTX 1650, 4 GiB (Turing TU117, **no tensor cores**) |
+| Training time | **110 epochs, 5.40 h** (base) + **25 epochs, 1.40 h** (perceptual fine-tune) = 6.80 h total |
+| Training precision | fp32 — **measured 5x faster than AMP fp16 on this GPU** (20.1 vs 4.0 img/s). Re-benchmark on tensor-core hardware, where fp16 should win. |
+| Inference, end-to-end | **31.51 ms/image (31.7 img/s)** with `--fp32`, batch 16, all 397 test images. Default fp16 path: 113.30 ms/image on this card. |
+| Why fp16 is still the default | KLA benchmarks on an H100, whose tensor cores make fp16 the faster choice. On GPUs without them, pass `--fp32`. |
+| Runtime definition | includes disk read, preprocessing, host<->device transfer, model execution, device<->host transfer and saving — KLA's full definition, not just the forward pass |
+| Batch size | 16 (inference), 12 (training) |
 | Timing method | `time.perf_counter()` with `torch.cuda.synchronize()` around every GPU stage |
-| Seed | 0 (set for `random`, `numpy` and `torch`; recorded in the checkpoint) |
+| Model size | 1,367,553 parameters, 16 MB checkpoint |
+| Seed | 0 (`random`, `numpy`, `torch`; recorded in the checkpoint) |
 
 ## External resources
 

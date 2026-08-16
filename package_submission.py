@@ -124,15 +124,21 @@ def main():
         gpu = torch.cuda.get_device_name(0)
     except Exception:
         gpu = "CPU"
-    logs = [p for p in (ROOT / "results").glob("*_log.csv") if p.stem != "smoke_log"]
-    epochs = hours = 0
-    if logs:
-        rows = list(csv.DictReader(max(logs, key=lambda p: p.stat().st_mtime).open()))
-        epochs = len(rows)
-        hours = sum(float(r["seconds"]) for r in rows) / 3600.0
+    # Every real run, not just the most recent. Picking one silently reported a
+    # 25-epoch fine-tune as if it were the whole training history.
+    logs = [p for p in (ROOT / "results").glob("*_log.csv")
+            if not p.stem.startswith("smoke") and "overfit" not in p.stem]
+    parts, epochs, hours = [], 0, 0.0
+    for lg in sorted(logs):
+        rows = list(csv.DictReader(lg.open()))
+        if not rows:
+            continue
+        h = sum(float(r["seconds"]) for r in rows) / 3600.0
+        parts.append(f"{lg.stem.replace('_log','')}: {len(rows)} epochs, {h:.2f} h")
+        epochs += len(rows); hours += h
     fill_readme(metrics, {
         "Training hardware": gpu,
-        "Training time": f"{epochs} epochs, {hours:.1f} h wall clock",
+        "Training time": (" + ".join(parts) + f"  (total {hours:.2f} h)") or "n/a",
         "Inference hardware measured": gpu,
         "End-to-end runtime": "see the timing block printed by `inference.py` "
                               "(disk read, preprocessing, host↔device transfer, model "
