@@ -324,7 +324,7 @@ def main():
     fill(find(impact, "Describe the most significant benefit"), [
         f"PSNR {base.get('psnr', 0):.2f} → {ours.get('psnr', 0):.2f} dB",
         f"SSIM {base.get('ssim', 0):.4f} → {ours.get('ssim', 0):.4f}",
-        f"LPIPS {base.get('lpips', 0):.4f} → {ours.get('lpips', 0):.4f} (lower better)",
+        f"LPIPS {base.get('lpips', 0):.4f} → {ours.get('lpips', 0):.4f}",
         f"Untrained control {ctrl.get('psnr', 0):.2f} dB — the metric can fail.",
     ], size=11)
     quant = [
