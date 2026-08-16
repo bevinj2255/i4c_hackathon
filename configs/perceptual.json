@@ -1,0 +1,22 @@
+{
+  "name": "perceptual",
+  "channels": 64,
+  "blocks": 16,
+  "scale": 2,
+  "res_scale": 0.1,
+  "patch": 0,
+  "batch_size": 8,
+  "lr": 5e-5,
+  "epochs": 25,
+  "overfit_epochs": 300,
+  "p_synth": 0.5,
+  "p_pattern": 0.0,
+  "edge_weight": 0.0,
+  "lpips_weight": 0.10,
+  "amp": false,
+  "workers": 0,
+  "seed": 0,
+  "_purpose": "Fine-tune the base checkpoint with a perceptual (LPIPS) term added to the Charbonnier loss. Charbonnier alone optimises pixel error, whose cheapest minimiser is to smooth away low-contrast texture -- which is why the base model leads on PSNR/SSIM but trails on LPIPS. Launch with --init_from weights/base_best.pt.",
+  "_ship_rule": "KLA combines PSNR, SSIM and LPIPS with undisclosed weights, so a large LPIPS gain is worth a small PSNR give-back, but not a large one. Ship only if LPIPS improves clearly AND PSNR drops by less than ~0.15 dB.",
+  "_batch_note": "batch 8, down from 12: the frozen AlexNet used for LPIPS also needs VRAM on a 4 GB card."
+}

@@ -63,13 +63,43 @@ def edge_loss(pred, gt):
     return (px - gx).abs().mean() + (py - gy).abs().mean()
 
 
-def make_loss(cfg):
-    w = cfg.get("edge_weight", 0.0)
+_LPIPS_NET = None
+
+
+def lpips_loss(pred, gt, device):
+    """Perceptual distance, differentiable, used as a training term.
+
+    Charbonnier alone optimises pixel accuracy, which is why a model trained on it
+    wins PSNR/SSIM and loses LPIPS: the cheapest way to reduce average pixel error is
+    to smooth away low-contrast texture. LPIPS penalises exactly that.
+
+    Grayscale is replicated to 3 channels and rescaled to [-1,1], which is how
+    single-channel data is fed to LPIPS.
+    """
+    global _LPIPS_NET
+    if _LPIPS_NET is None:
+        import lpips as lpips_lib
+        _LPIPS_NET = lpips_lib.LPIPS(net="alex", verbose=False).to(device)
+        for prm in _LPIPS_NET.parameters():      # frozen: it is a metric, not a model
+            prm.requires_grad_(False)
+        _LPIPS_NET.eval()
+
+    def prep(t):
+        return (t.clamp(0, 1).repeat(1, 3, 1, 1) * 2.0 - 1.0)
+
+    return _LPIPS_NET(prep(pred), prep(gt)).mean()
+
+
+def make_loss(cfg, device):
+    w_edge = cfg.get("edge_weight", 0.0)
+    w_lpips = cfg.get("lpips_weight", 0.0)
 
     def loss_fn(pred, gt):
         loss = charbonnier(pred, gt)
-        if w > 0:
-            loss = loss + w * edge_loss(pred, gt)
+        if w_edge > 0:
+            loss = loss + w_edge * edge_loss(pred, gt)
+        if w_lpips > 0:
+            loss = loss + w_lpips * lpips_loss(pred, gt, device)
         return loss
 
     return loss_fn
@@ -114,7 +144,7 @@ def benchmark(model, cfg, device, amp, seconds=30):
     """
     opt = torch.optim.Adam(model.parameters(), lr=cfg["lr"])
     scaler = torch.amp.GradScaler("cuda", enabled=amp)
-    loss_fn = make_loss(cfg)
+    loss_fn = make_loss(cfg, device)
     # patch 0 means "train on whole images", which for this dataset is 128x128.
     p = cfg["patch"] or 128
     s, b = cfg["scale"], cfg["batch_size"]
@@ -223,7 +253,7 @@ def main():
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=cfg["epochs"],
                                                        eta_min=cfg["lr"] * 0.01)
     scaler = torch.amp.GradScaler("cuda", enabled=amp)
-    loss_fn = make_loss(cfg)
+    loss_fn = make_loss(cfg, device)
 
     first_loss = None
     start_epoch, best = 0, -1.0
