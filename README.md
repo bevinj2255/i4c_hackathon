@@ -165,9 +165,32 @@ _Populated by `python evaluate.py --weights weights/model.pt`; see
 | Method | PSNR (dB) | SSIM | LPIPS |
 |---|---|---|---|
 | Bicubic ×2 (baseline) | 23.234 | 0.5395 | 0.4369 |
-| RestoreNet (ours) | 28.465 | 0.7489 | 0.3413 |
-| RestoreNet + 8× TTA | _pending_ | _pending_ | _pending_ |
-| Untrained control | 11.829 | 0.1046 | — |
+| RestoreNet (ours) | 28.533 | 0.7514 | 0.3297 |
+| RestoreNet + 8× TTA | 28.569 | 0.7525 | 0.3337 |
+| Untrained control | 10.387 | 0.1022 | — |
+
+**8× test-time augmentation is measured and deliberately NOT shipped.** It buys
++0.036 dB PSNR and +0.0011 SSIM, but makes **LPIPS worse** (0.3337 vs 0.3297) and costs
+8× the compute. It stays available behind `--tta`; it is not the default because the
+measurement does not justify it.
+
+### Generalisation to unseen structure
+
+The training data is natural photography, so the model is also probed on 15 synthetic
+semiconductor-like patterns it has never seen (`python ood_check.py`) — gratings at three
+pitches and angles, contact arrays, checkerboards, step edges, and a periodic field
+containing a missing contact plus a bridging defect.
+
+| | epoch 1 | epoch 60 | final |
+|---|---|---|---|
+| mean PSNR gain vs bicubic | −0.85 dB | +2.10 dB | **+2.56 dB** |
+| patterns where bicubic wins | 10/15 | 3/15 | **1/15** |
+| step edges | +7.18 dB | +11.70 dB | **+12.20 dB** (SSIM 0.296 → 0.970) |
+| defect array | −0.05 dB | +2.04 dB | **+2.18 dB** (SSIM 0.628 → 0.808) |
+
+The single remaining loss is a 4-pixel checkerboard (−0.79 dB), which after a 2×2 area
+downsample lands on the box filter's null — the contrast is destroyed, not corrupted, so
+no method recovers it. Reported rather than hidden.
 
 Figures in `results/figures/`: dataset sample, degradation analysis, training curve,
 and restoration examples.
@@ -215,14 +238,16 @@ python src/degrade.py && python src/model.py && python -m src.data && python src
 
 | | |
 |---|---|
-| Training hardware | NVIDIA GeForce GTX 1650 (4 GiB, Turing TU117, no tensor cores) |
-| Training time | 72 epochs so far, 3.6 h wall clock (run in progress, 110 planned) |
-| Inference hardware measured | GTX 1650 / CPU; KLA benchmarks on H100 |
-| End-to-end runtime | reported by `inference.py` itself (disk read, preprocessing, host↔device transfer, model execution, saving) |
-| Batch size | 16 for inference, 12 for training |
-| Timing method | `time.perf_counter()`, with `torch.cuda.synchronize()` around every GPU stage |
-| Precision | fp32 — measured 5× faster than AMP fp16 on this GPU (no tensor cores) |
-| Seed | 0 (set for `random`, `numpy` and `torch`; recorded in the checkpoint) |
+| Training hardware | NVIDIA GeForce GTX 1650, 4 GiB (Turing TU117, **no tensor cores**) |
+| Training time | 110 epochs, 5.40 h wall clock, best at epoch 108 |
+| Training precision | fp32 — **measured 5× faster than AMP fp16 on this GPU** (20.1 vs 4.0 img/s). Re-benchmark on tensor-core hardware, where fp16 should win. |
+| Inference, end-to-end | **31.51 ms/image (31.7 img/s)** with `--fp32` on the GTX 1650, batch 16, all 397 test images. Default fp16 path: 113.30 ms/image on this card. |
+| Why fp16 is still the default | KLA benchmarks on an H100, whose tensor cores make fp16 the faster choice. On GPUs without them, pass `--fp32`. |
+| Runtime definition | includes disk read, preprocessing, host↔device transfer, model execution, device↔host transfer and saving — KLA's full definition, not just the forward pass |
+| Batch size | 16 (inference), 12 (training) |
+| Timing method | `time.perf_counter()` with `torch.cuda.synchronize()` around every GPU stage |
+| Model size | 1,367,553 parameters, 16 MB checkpoint |
+| Seed | 0 (`random`, `numpy`, `torch`; recorded in the checkpoint) |
 
 ## External resources
 
