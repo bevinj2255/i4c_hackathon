@@ -331,6 +331,41 @@ the validation metric it produced._
 |---|---|---|---|---|---|---|
 | _pending_ | | | | | | |
 
+## 5.1 Out-of-distribution probe — generalisation improves with training
+
+15 synthetic semiconductor-like patterns (gratings at 3 pitches × 3 angles, contact
+arrays, checkerboards, step edges, and a periodic field with a missing contact plus a
+bridging defect), degraded with the *measured* forward model so only the content is out
+of distribution. None of this structure appears in training, which is natural
+photography.
+
+| | epoch 1 | epoch 60 |
+|---|---|---|
+| mean PSNR gain vs bicubic | −0.85 dB | **+2.10 dB** |
+| patterns where bicubic wins | 10 / 15 | **3 / 15** |
+| step edges | +7.18 dB | **+11.70 dB**, SSIM 0.296 → 0.969 |
+| defect array | −0.05 dB | **+2.04 dB**, SSIM 0.628 → 0.802 |
+| grating pitch 16 (best) | +2.03 dB | **+4.92 dB** |
+| grating pitch 6, checker 4 (worst) | −5.9 dB | −1.0 dB |
+
+**The finding that matters:** trained only on natural photographs, the network becomes
+good at structure it has never seen. That is evidence it is learning a generic local
+restoration operator rather than natural-image priors — which is exactly the property
+the hidden test set's out-of-distribution half demands.
+
+The residual losses sit at pitch 6 and a 4-pixel checkerboard. After a 2×2 area
+downsample those land essentially on the box filter's null: a 6 px pitch at 256 becomes
+3 px at 128. The contrast is destroyed, not merely corrupted, so no method recovers it
+and bicubic scores better only by passing through noise that happens to preserve
+contrast. This is an information-theoretic floor and is reported as such rather than
+hidden.
+
+**Consequence for the planned experiment.** `configs/finetune_ood.json` was written to
+mix synthetic structure into training on the assumption that OOD would be the weak
+point. This measurement says it largely is not. The experiment is still worth running
+with spare GPU time, but the bar stands: it ships only if it improves *both* the
+in-distribution validation split and this probe.
+
 ## 6. Final metrics
 
 _Populated by `evaluate.py` on the 200-image held-out split._
