@@ -27,6 +27,8 @@ import json
 from pathlib import Path
 
 from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
+from pptx.dml.color import RGBColor
 from pptx.util import Inches, Pt
 
 TEMPLATE = Path("idea_template.pptx")
@@ -64,7 +66,10 @@ def ood():
 def training():
     runs = []
     for lg in sorted(Path("results").glob("*_log.csv")):
-        if lg.stem.startswith("smoke") or "overfit" in lg.stem:
+        # finetune_ood was an experiment we measured and rejected; it contributed
+        # nothing to the shipped weights, so it does not belong on a results slide.
+        if (lg.stem.startswith("smoke") or "overfit" in lg.stem
+                or "finetune_ood" in lg.stem):
             continue
         rows = list(csv.DictReader(lg.open()))
         if rows:
@@ -136,6 +141,37 @@ def fill(shape, lines, size=None, bullet=True):
         para.space_after = Pt(3)
 
 
+def place(shape, left=None, top=None, width=None, height=None):
+    """Move/resize a shape. The template's cards are sized for one-line placeholders;
+    real content needs the room, so cards are grown and their text placed inside them
+    rather than allowed to spill over the label above."""
+    if shape is None:
+        return
+    if left is not None:
+        shape.left = Inches(left)
+    if top is not None:
+        shape.top = Inches(top)
+    if width is not None:
+        shape.width = Inches(width)
+    if height is not None:
+        shape.height = Inches(height)
+
+
+def card(slide, top, height, left=1.05, width=11.23, index=0):
+    """The n-th rounded content card on a slide (the big outer panel excluded)."""
+    # The cards are AUTO_SHAPEs with an empty text frame. Filtering on
+    # "not sh.has_text_frame" silently matched nothing -- auto-shapes have one.
+    cards = [sh for sh in slide.shapes
+             if sh.shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE
+             and sh.has_text_frame and not sh.text_frame.text.strip()
+             and sh.width / 914400 > 4 and sh.top / 914400 > 3.0]
+    cards.sort(key=lambda s: (s.top, s.left))
+    if index < len(cards):
+        place(cards[index], left, top, width, height)
+        return cards[index]
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--team", default="TEAM NAME")
@@ -169,6 +205,7 @@ def main():
     yb = sorted([sh for sh in team.shapes if sh.has_text_frame
                  and "{Enter Year}" in sh.text_frame.text], key=lambda s: s.top)
     for box, nm in zip(nb, names):
+        place(box, width=4.4)          # 1.2in wrapped "Bevin Punnoose Jacob" onto 3 lines
         fill(box, nm, bullet=False)
     for box in yb[:len(names)]:
         fill(box, a.year, bullet=False)
@@ -176,14 +213,20 @@ def main():
     hint = find(team, "A team can have up to 4 members")
     if hint is not None:
         hint._element.getparent().remove(hint._element)
-    fill(find(team, "Enter Full College Name"), a.college, bullet=False)
+    cbox = find(team, "Enter Full College Name"); place(cbox, width=10.0)
+    fill(cbox, a.college, bullet=False)
     fill(find(team, "+91 XXXXX"), a.phone or "—", bullet=False)
-    fill(find(team, "email@example.com"), a.contact or "—", bullet=False)
+    ebox = find(team, "email@example.com"); place(ebox, width=5.2)
+    fill(ebox, a.contact or "—", bullet=False)
 
     # 2 -- Problem ------------------------------------------------------------
     fill(find(problem, "Selected the problem statement"),
          "KLA PS01 — AI-Based Restoration of Degraded Semiconductor Inspection Images",
          bullet=False, size=13)
+    card(problem, top=4.05, height=2.95)
+    place(find(problem, "DESCRIPTION / DETAILS"), left=1.31, top=4.18)
+    place(find(problem, "Provide specific details about the problem statement"),
+          left=1.31, top=4.52, width=10.7, height=2.4)
     fill(find(problem, "Provide specific details about the problem statement"), [
         "Inspection images decide whether a wafer passes: one pixel of noise can hide a killer defect.",
         "Three degradations, order undisclosed — speckle noise, additive Gaussian noise, 2× downsampling.",
@@ -198,6 +241,14 @@ def main():
          "One small fully-convolutional network denoises and 2× super-resolves in a single pass, "
          "built on a degradation model recovered from the data rather than guessed.",
          bullet=False, size=12)
+    card(idea, top=4.05, height=1.42, index=0)
+    place(find(idea, "KEY CONCEPT & APPROACH"), left=1.27, top=4.18)
+    place(find(idea, "Briefly describe the core concept"),
+          left=1.27, top=4.50, width=10.7, height=0.9)
+    card(idea, top=5.60, height=1.42, index=1)
+    place(find(idea, "SOLUTION OVERVIEW"), left=1.27, top=5.73)
+    place(find(idea, "Provide an overview of the solution"),
+          left=1.27, top=6.05, width=10.7, height=0.9)
     fill(find(idea, "Briefly describe the core concept"), [
         "Reverse-engineered KLA's exact degradation recipe from the 3200 provided pairs.",
         "That yields unlimited correctly-degraded training data, with fresh noise every epoch.",
@@ -214,6 +265,10 @@ def main():
     stack = f"PyTorch 2.9.1+cu128, trained on {a.gpu}"
     if runs:
         stack += " — " + " + ".join(f"{n} {e} ep/{h:.1f} h" for n, e, h in runs)
+    card(solution, top=4.05, height=2.95)
+    place(find(solution, "SOLUTION DETAILS"), left=1.31, top=4.18)
+    place(find(solution, "Provide specific details about your proposed solution"),
+          left=1.31, top=4.52, width=10.7, height=2.4)
     fill(find(solution, "Provide specific details about your proposed solution"), [
         "DEGRADATION RECOVERED (measured): 2×2 area-average downsample; noise applied after it; "
         "speckle multiplicative, var ∝ pixel² (r = 0.993); σ_speckle 0.10–0.25, σ_gauss 0.00–0.15.",
@@ -229,6 +284,14 @@ def main():
     fill(find(innov, "Highlight what makes your idea unique"),
          "We measured what others assume — which produced both the data advantage and the model.",
          bullet=False, size=12)
+    card(innov, top=4.05, height=2.95, left=1.05, width=5.49, index=0)
+    card(innov, top=4.05, height=2.95, left=6.79, width=5.49, index=1)
+    place(find(innov, "KEY INNOVATION"), left=1.31, top=4.18)
+    place(find(innov, "Describe the core innovation"),
+          left=1.31, top=4.52, width=4.98, height=2.4)
+    place(find(innov, "COMPETITIVE ADVANTAGE"), left=7.05, top=4.18)
+    place(find(innov, "Explain how your solution is better"),
+          left=7.05, top=4.52, width=4.98, height=2.4)
     fill(find(innov, "Describe the core innovation"), [
         "Degradation recovered, not guessed — giving unlimited perfectly-matched training data.",
         "Noise SPECTRUM matched, not just variance: caught a 16% high-frequency error every variance test passed.",
@@ -244,6 +307,20 @@ def main():
     fill(find(impact, "Explain how your solution will make an impact"),
          "Recovers detail engineers currently accept as lost — and generalises to structure it never trained on.",
          bullet=False, size=12)
+    card(impact, top=4.02, height=1.85, left=1.05, width=5.49, index=0)
+    card(impact, top=4.02, height=1.85, left=6.79, width=5.49, index=1)
+    # The template puts a small badge icon to the left of each label; move those with
+    # the labels, or they end up sitting on top of the metrics.
+    for pic in [sh for sh in impact.shapes
+                if sh.shape_type == MSO_SHAPE_TYPE.PICTURE
+                and sh.width / 914400 < 0.3 and sh.top / 914400 > 4.5]:
+        pic.top = Inches(4.17)
+    place(find(impact, "Primary Impact"), left=1.60, top=4.13)
+    place(find(impact, "Describe the most significant benefit"),
+          left=1.31, top=4.47, width=4.98, height=1.3)
+    place(find(impact, "Quantifiable Outcomes"), left=7.37, top=4.13)
+    place(find(impact, "List potential metrics or stats"),
+          left=7.05, top=4.47, width=4.98, height=1.3)
     fill(find(impact, "Describe the most significant benefit"), [
         f"PSNR {base.get('psnr', 0):.2f} → {ours.get('psnr', 0):.2f} dB",
         f"SSIM {base.get('ssim', 0):.4f} → {ours.get('ssim', 0):.4f}",
@@ -262,19 +339,33 @@ def main():
     fill(find(impact, "List potential metrics or stats"), quant, size=11)
     fig = FIG / "slide_result.png"
     if fig.exists():
-        impact.shapes.add_picture(str(fig), Inches(1.47), Inches(6.02), width=Inches(10.4))
+        impact.shapes.add_picture(str(fig), Inches(1.47), Inches(6.00), width=Inches(10.4))
 
     # 7 -- GitHub + references -------------------------------------------------
     fill(find(links, "Paste your GitHub"), a.repo, bullet=False, size=13)
-    if a.video:
-        fill(find(links, "Paste your Video Link"), a.video, bullet=False, size=13)
-    else:
-        fill(find(links, "Paste your Video Link"), [
-            "References — Lim et al., EDSR, CVPRW 2017 · Shi et al., PixelShuffle, CVPR 2016 ·",
-            "Zhang et al., LPIPS, CVPR 2018 · Zhai et al., IEEE Access 11:21049, 2023 ·",
+    # Do NOT put references under the "Prototype / Simulation Video" heading -- that
+    # mislabels them. The video box says what is true, and references get their own
+    # box in the free space below the cards.
+    fill(find(links, "Paste your Video Link"),
+         a.video or "Not submitted — full results, figures and code are in the repository.",
+         bullet=False, size=12)
+    tb = links.shapes.add_textbox(Inches(1.15), Inches(6.45), Inches(11.0), Inches(0.75))
+    tf = tb.text_frame
+    tf.word_wrap = True
+    for i, line in enumerate([
+            "REFERENCES",
+            "Lim et al., EDSR, CVPRW 2017 · Shi et al., PixelShuffle, CVPR 2016 · "
+            "Zhang et al., LPIPS, CVPR 2018 · Zhai et al., IEEE Access 11:21049, 2023 · "
             "Terven et al., Artif Intell Rev 58:195, 2025 · Monga et al., IEEE SPM 38(2), 2021.",
             "No external datasets or pretrained weights were used for the model.",
-        ], size=10, bullet=False)
+    ]):
+        para = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        run = para.add_run()
+        run.text = line
+        run.font.size = Pt(11 if i == 0 else 9)
+        run.font.bold = (i == 0)
+        run.font.color.rgb = RGBColor(0xA8, 0xE6, 0x3A) if i == 0 else RGBColor(0xD5, 0xDC, 0xEA)
+        para.space_after = Pt(2)
 
     out = Path(a.out or f"results/{a.team.replace(' ', '')}_KLA_PS01.pptx")
     out.parent.mkdir(parents=True, exist_ok=True)
