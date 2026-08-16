@@ -63,19 +63,46 @@ def ood():
             "wins": sum(1 for x in g if x > 0), "best": max(g)}
 
 
-def training():
+def training(shipped_channels=None):
+    """Only the runs that actually produced the shipped weights.
+
+    Listing every log was wrong twice over: it included finetune_ood, an experiment we
+    measured and rejected, and it included the 1.37M model's runs after a 4.4M model was
+    shipped. A training history on a results slide has to describe the thing being
+    submitted. Runs are matched to the shipped architecture by channel count.
+    """
     runs = []
     for lg in sorted(Path("results").glob("*_log.csv")):
-        # finetune_ood was an experiment we measured and rejected; it contributed
-        # nothing to the shipped weights, so it does not belong on a results slide.
-        if (lg.stem.startswith("smoke") or "overfit" in lg.stem
-                or "finetune_ood" in lg.stem):
+        name = lg.stem.replace("_log", "")
+        if name.startswith("smoke") or "overfit" in name or "finetune_ood" in name:
             continue
+        cfg_file = Path("configs") / f"{name}.json"
+        if shipped_channels is not None and cfg_file.exists():
+            if json.loads(cfg_file.read_text()).get("channels") != shipped_channels:
+                continue
         rows = list(csv.DictReader(lg.open()))
         if rows:
-            runs.append((lg.stem.replace("_log", ""), len(rows),
+            runs.append((name, len(rows),
                          sum(float(r["seconds"]) for r in rows) / 3600.0))
     return runs
+
+
+def model_facts():
+    """Architecture read from the shipped checkpoint, never typed in.
+
+    These lines were hardcoded as "1.37M / 16 blocks x 64 ch / 31.5 ms" and silently
+    became wrong the moment a different model was shipped. A deck that contradicts its
+    own weights file is worse than one with fewer numbers.
+    """
+    import torch
+    f = Path("weights/model.pt")
+    if not f.exists():
+        return {}
+    ck = torch.load(f, map_location="cpu", weights_only=False)
+    cfg = ck.get("cfg", {})
+    n = sum(v.numel() for v in ck["model"].values())
+    return {"params": n, "millions": n / 1e6, "ch": cfg.get("channels", "?"),
+            "blocks": cfg.get("blocks", "?"), "mb": f.stat().st_size / 2**20}
 
 
 def drop_slide(prs, index):
@@ -183,13 +210,16 @@ def main():
     ap.add_argument("--repo", default="https://github.com/bevinj2255/i4c_hackathon")
     ap.add_argument("--video", default="")
     ap.add_argument("--gpu", default="NVIDIA GeForce GTX 1650 (4 GiB)")
+    ap.add_argument("--ms_per_image", default="101",
+                    help="measured end-to-end ms/image, from inference.py")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
 
     if not TEMPLATE.exists():
         raise SystemExit(f"ABORT: {TEMPLATE} not found — it is the official i4C template.")
 
-    m, o, runs = metrics(), ood(), training()
+    mf = model_facts()
+    m, o, runs = metrics(), ood(), training(mf.get('ch'))
     ours, base, ctrl = m.get("ours", {}), m.get("base", {}), m.get("ctrl", {})
     prs = Presentation(str(TEMPLATE))
 
@@ -254,7 +284,8 @@ def main():
         "That yields unlimited correctly-degraded training data, with fresh noise every epoch.",
     ], size=11)
     fill(find(idea, "Provide an overview of the solution"), [
-        "1.37M-parameter residual CNN; all work at low resolution, one PixelShuffle at the end — 4× cheaper.",
+        f"{mf.get('millions', 0):.1f}M-parameter residual CNN; all work at low resolution, "
+        f"one PixelShuffle at the end — 4× cheaper.",
         "Fully convolutional, so the same weights restore 128→256 and 256→512.",
     ], size=11)
 
@@ -262,9 +293,10 @@ def main():
     fill(find(solution, "Describe your idea in detail"),
          "Measured forward model → unlimited synthetic pairs → compact CNN → "
          "loss blended for pixel and perceptual quality.", bullet=False, size=12)
-    stack = f"PyTorch 2.9.1+cu128, trained on {a.gpu}"
-    if runs:
-        stack += " — " + " + ".join(f"{n} {e} ep/{h:.1f} h" for n, e, h in runs)
+    stack = "PyTorch 2.9.1+cu128 — " + (
+        " + ".join(f"{n} {e} ep/{h:.1f} h" for n, e, h in runs) if runs else a.gpu)
+    if a.gpu:
+        stack += f" on {a.gpu}"
     card(solution, top=4.05, height=2.95)
     place(find(solution, "SOLUTION DETAILS"), left=1.31, top=4.18)
     place(find(solution, "Provide specific details about your proposed solution"),
@@ -274,10 +306,12 @@ def main():
         "speckle multiplicative, var ∝ pixel² (r = 0.993); σ_speckle 0.10–0.25, σ_gauss 0.00–0.15.",
         "verify_degradation.py re-derives every constant from the data and ABORTS on mismatch.",
         "TRAINING: 50/50 real and synthesised pairs; noise ranges widened beyond measured; 8-fold dihedral augmentation.",
-        "MODEL: 16 residual blocks × 64 ch → PixelShuffle ×2. No global skip from the noisy input. Output clamped to [0,1].",
+        f"MODEL: {mf.get('blocks','?')} residual blocks × {mf.get('ch','?')} ch → "
+        f"PixelShuffle ×2. No global skip from the noisy input. Output clamped to [0,1].",
         "LOSS: Charbonnier blended with an LPIPS perceptual term by weight interpolation of two checkpoints.",
         f"STACK: {stack}.",
-        "FEASIBILITY: 16 MB checkpoint, 31.5 ms/image end-to-end; runs unchanged on CPU or any NVIDIA GPU.",
+        f"FEASIBILITY: {mf.get('mb', 0):.0f} MB checkpoint, {a.ms_per_image} ms/image "
+        f"end-to-end on a GTX 1650; runs unchanged on CPU or any NVIDIA GPU.",
     ], size=10)
 
     # 5 -- Innovation ---------------------------------------------------------
@@ -299,7 +333,8 @@ def main():
     ], size=11)
     fill(find(innov, "Explain how your solution is better"), [
         f"Beats bicubic on {ours.get('n', 200)}/{ours.get('n', 200)} validation images — every one, not on average.",
-        "Deliberately small (1.37M params): KLA scores throughput, and oversized models lose it.",
+        f"Compact by design ({mf.get('millions',0):.1f}M params, {mf.get('mb',0):.0f} MB): "
+        f"all computation at low resolution, so throughput stays high.",
         "Ideas tested and REJECTED on evidence: 8× TTA (worsened LPIPS), synthetic-pattern training (−0.22 dB).",
     ], size=11)
 
@@ -331,7 +366,7 @@ def main():
         f"+{ours.get('psnr', 0) - base.get('psnr', 0):.2f} dB PSNR, "
         f"+{ours.get('ssim', 0) - base.get('ssim', 0):.4f} SSIM, "
         f"{base.get('lpips', 0) - ours.get('lpips', 0):.4f} better LPIPS",
-        "31.5 ms/image end-to-end (read → preprocess → transfer → model → save)",
+        f"{a.ms_per_image} ms/image end-to-end (read → preprocess → transfer → model → save)",
     ]
     if o:
         quant.append(f"Unseen semiconductor-like structure: {o['mean']:+.2f} dB mean, "

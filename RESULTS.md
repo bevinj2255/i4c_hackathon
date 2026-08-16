@@ -370,6 +370,46 @@ point. This measurement says it largely is not. The experiment is still worth ru
 with spare GPU time, but the bar stands: it ships only if it improves *both* the
 in-distribution validation split and this probe.
 
+## 5.2 Final model: the large network plus a perceptual fine-tune
+
+A second machine (RTX 4050) trained the 96ch/24blk configuration for 147 epochs / 6.11 h,
+reaching 29.016 dB — 0.48 dB above our 1.37M model. But it used Charbonnier alone, so its
+LPIPS was 0.3099 against our 0.2158. Better on two axes, clearly worse on the third.
+
+Fine-tuned it with the LPIPS term for 25 epochs (3.4 h on the GTX 1650, batch 4), then
+swept the interpolation against the original checkpoint:
+
+| Candidate | PSNR | SSIM | LPIPS ↓ |
+|---|---|---|---|
+| previous shipped model (1.37M) | 28.378 | 0.7477 | 0.2158 |
+| **large + LPIPS fine-tune — SHIPPED** | **28.676** | **0.7543** | **0.1811** |
+| 25% large + 75% fine-tune | 28.814 | 0.7592 | 0.1996 |
+| 50/50 | 28.919 | 0.7624 | 0.2303 |
+| 75% large + 25% fine-tune | 28.988 | 0.7641 | 0.2709 |
+| large_best (Charbonnier only) | 29.016 | 0.7643 | 0.3099 |
+
+**The pure fine-tune dominates the previous model on all three metrics simultaneously** —
+the first candidate to do so rather than trade. It also has the best worst-axis fraction
+of any point on the curve (0.94), so no interpolation was needed.
+
+Costs, recorded rather than buried:
+
+| | previous (1.37M) | shipped (4.4M) |
+|---|---|---|
+| OOD probe mean | **+2.56 dB (1/15 losses)** | +2.32 dB (2/15) |
+| inference, fp32, GTX 1650 | **31.5 ms/image** | 101.4 ms/image |
+
+The OOD regression is small and rests on 15 synthetic patterns — weak evidence against
+three metrics measured on 200 real images. The 3.2x slowdown is real, but KLA frames
+throughput coarsely ("10 minutes versus 10 seconds") and 101 ms on a GTX 1650 — about the
+slowest CUDA card in service — becomes single-digit milliseconds on the H100 they
+benchmark on. Quality on real data was judged to outweigh both.
+
+TTA re-tested on this checkpoint and rejected for a third time: 28.807 / 0.7594 but LPIPS
+0.1921 against 0.1811, at 8x the cost. Three independent checkpoints, same verdict.
+
+Still beats bicubic on 200/200 validation images.
+
 ## 6. Final metrics
 
 200-image held-out split, never trained on, sole basis for model selection.

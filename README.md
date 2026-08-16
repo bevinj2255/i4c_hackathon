@@ -133,8 +133,8 @@ resolution — the throughput axis and the 4 GB training budget point the same w
 
 | | |
 |---|---|
-| Parameters | 1,367,553 |
-| Body | 16 residual blocks, 64 channels, residual scaling 0.1 |
+| Parameters | 4,402,945 |
+| Body | 24 residual blocks, 96 channels, residual scaling 0.1 |
 | Upsampling | one PixelShuffle ×2 at the end |
 | Input handling | centred at 0.5, **never clipped** |
 | Output handling | clamped to [0,1] |
@@ -165,9 +165,9 @@ _Populated by `python evaluate.py --weights weights/model.pt`; see
 | Method | PSNR (dB) | SSIM | LPIPS |
 |---|---|---|---|
 | Bicubic ×2 (baseline) | 23.234 | 0.5395 | 0.4369 |
-| RestoreNet (ours) | 28.378 | 0.7477 | 0.2158 |
-| RestoreNet + 8× TTA | 28.449 | 0.7511 | 0.2257 |
-| Untrained control | 11.700 | 0.1487 | — |
+| RestoreNet (ours) | 28.676 | 0.7543 | 0.1811 |
+| RestoreNet + 8× TTA | 28.807 | 0.7594 | 0.1921 |
+| Untrained control | 10.354 | 0.1785 | — |
 
 The shipped model is a **weight interpolation** of two checkpoints: one trained with
 Charbonnier loss alone, one fine-tuned with an added LPIPS perceptual term. Charbonnier
@@ -246,15 +246,14 @@ python src/degrade.py && python src/model.py && python -m src.data && python src
 
 | | |
 |---|---|
-| Training hardware | NVIDIA GeForce GTX 1650, 4 GiB (Turing TU117, **no tensor cores**) |
-| Training time | **110 epochs, 5.40 h** (base) + **25 epochs, 1.40 h** (perceptual fine-tune) = 6.80 h total |
-| Training precision | fp32 — **measured 5x faster than AMP fp16 on this GPU** (20.1 vs 4.0 img/s). Re-benchmark on tensor-core hardware, where fp16 should win. |
-| Inference, end-to-end | **31.51 ms/image (31.7 img/s)** with `--fp32`, batch 16, all 397 test images. Default fp16 path: 113.30 ms/image on this card. |
-| Why fp16 is still the default | KLA benchmarks on an H100, whose tensor cores make fp16 the faster choice. On GPUs without them, pass `--fp32`. |
+| Training hardware | NVIDIA GeForce RTX 4050 Laptop (base run) and GTX 1650 4 GiB (perceptual fine-tune) |
+| Training time | 147 epochs / 6.11 h (base, RTX 4050) + 25 epochs / 3.4 h (perceptual fine-tune, GTX 1650) |
+| Training precision | fp16 on the RTX 4050; **fp32 on the GTX 1650, measured 5x faster there** (20.1 vs 4.0 img/s) because the GTX 16-series has no tensor cores. Benchmark per GPU: `train.py --benchmark`. |
+| Inference, end-to-end | **101.4 ms/image** with `--fp32` on a GTX 1650, batch 8, all 397 test images. A GTX 1650 is roughly the slowest CUDA card this would ever run on. |
 | Runtime definition | includes disk read, preprocessing, host<->device transfer, model execution, device<->host transfer and saving — KLA's full definition, not just the forward pass |
-| Batch size | 16 (inference), 12 (training) |
+| Batch size | 8 (inference and training on 4 GiB), 16 on larger cards |
 | Timing method | `time.perf_counter()` with `torch.cuda.synchronize()` around every GPU stage |
-| Model size | 1,367,553 parameters, 16 MB checkpoint |
+| Model size | 4,402,945 parameters, 51 MB checkpoint |
 | Seed | 0 (`random`, `numpy`, `torch`; recorded in the checkpoint) |
 
 ## External resources

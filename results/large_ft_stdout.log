@@ -8,3 +8,31 @@ C:\Users\BEVIN\AppData\Roaming\Python\Python311\site-packages\torchvision\models
   warnings.warn(
 C:\Users\BEVIN\AppData\Roaming\Python\Python311\site-packages\torchvision\models\_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=AlexNet_Weights.IMAGENET1K_V1`. You can also use `weights=AlexNet_Weights.DEFAULT` to get the most up-to-date weights.
   warnings.warn(msg)
+epoch    1/25  loss 0.05866  val PSNR 28.523 dB  lr 4.98e-05  499s
+epoch    2/25  loss 0.05757  val PSNR 28.529 dB  lr 4.92e-05  506s
+epoch    3/25  loss 0.05727  val PSNR 28.554 dB  lr 4.83e-05  500s
+epoch    4/25  loss 0.05709  val PSNR 28.467 dB  lr 4.69e-05  492s
+epoch    5/25  loss 0.05720  val PSNR 28.554 dB  lr 4.53e-05  488s
+epoch    6/25  loss 0.05662  val PSNR 28.489 dB  lr 4.33e-05  573s
+epoch    7/25  loss 0.05713  val PSNR 28.676 dB  lr 4.10e-05  548s
+epoch    8/25  loss 0.05649  val PSNR 28.602 dB  lr 3.85e-05  504s
+epoch    9/25  loss 0.05632  val PSNR 28.638 dB  lr 3.58e-05  494s
+epoch   10/25  loss 0.05601  val PSNR 28.612 dB  lr 3.29e-05  492s
+epoch   11/25  loss 0.05631  val PSNR 28.550 dB  lr 2.99e-05  486s
+epoch   12/25  loss 0.05632  val PSNR 28.536 dB  lr 2.68e-05  492s
+epoch   13/25  loss 0.05600  val PSNR 28.582 dB  lr 2.37e-05  493s
+epoch   14/25  loss 0.05591  val PSNR 28.527 dB  lr 2.06e-05  489s
+epoch   15/25  loss 0.05546  val PSNR 28.627 dB  lr 1.76e-05  490s
+epoch   16/25  loss 0.05568  val PSNR 28.622 dB  lr 1.47e-05  487s
+epoch   17/25  loss 0.05557  val PSNR 28.656 dB  lr 1.20e-05  488s
+epoch   18/25  loss 0.05548  val PSNR 28.618 dB  lr 9.47e-06  489s
+epoch   19/25  loss 0.05515  val PSNR 28.661 dB  lr 7.21e-06  488s
+epoch   20/25  loss 0.05528  val PSNR 28.572 dB  lr 5.23e-06  492s
+epoch   21/25  loss 0.05530  val PSNR 28.656 dB  lr 3.56e-06  494s
+epoch   22/25  loss 0.05491  val PSNR 28.663 dB  lr 2.24e-06  490s
+epoch   23/25  loss 0.05514  val PSNR 28.643 dB  lr 1.28e-06  488s
+epoch   24/25  loss 0.05517  val PSNR 28.627 dB  lr 6.95e-07  486s
+epoch   25/25  loss 0.05492  val PSNR 28.637 dB  lr 5.00e-07  492s
+
+Done. Best val PSNR 28.676 dB -> weights/large_ft_perceptual_best.pt
+[W817 02:15:10.000000000 AllocatorConfig.cpp:28] Warning: PYTORCH_CUDA_ALLOC_CONF is deprecated, use PYTORCH_ALLOC_CONF instead (function operator ())

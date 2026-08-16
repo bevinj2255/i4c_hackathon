@@ -115,10 +115,16 @@ def main():
          "--output_dir", "results/restored_test"] + dev,
         "restoring the 397 test images")
 
-    # 4. Figures, including the required failure case.
+    # 4. Out-of-distribution probe. Must be re-run per checkpoint: the deck reads
+    #    results/ood_metrics.json, and leaving a previous model's numbers there put a
+    #    stale +2.56 dB on the results slide after a different model was shipped.
+    run(["ood_check.py", "--weights", "weights/model.pt"] + dev,
+        "out-of-distribution probe")
+
+    # 5. Figures, including the required failure case.
     run(["make_figures.py", "--weights", "weights/model.pt"] + dev, "figures")
 
-    # 5. README tables.
+    # 6. README tables.
     metrics = json.loads((ROOT / "results/metrics.json").read_text())["results"]
     try:
         gpu = torch.cuda.get_device_name(0)
@@ -149,11 +155,11 @@ def main():
         "Seed": "0 (set for `random`, `numpy` and `torch`; recorded in the checkpoint)",
     })
 
-    # 6. Deck.
+    # 7. Deck.
     run(["make_ppt.py", "--team", a.team, "--members", a.members,
          "--college", a.college, "--contact", a.contact, "--gpu", gpu], "submission deck")
 
-    # 7. The checklist, as an assertion rather than a hope.
+    # 8. The checklist, as an assertion rather than a hope.
     print("\n=== KLA mandatory deliverables ===")
     required = {
         "README.md": ROOT / "README.md",
@@ -163,6 +169,7 @@ def main():
         "model weights": ROOT / "weights/model.pt",
         "restored test outputs": ROOT / "results/restored_test",
         "metrics (PSNR/SSIM/LPIPS)": ROOT / "results/metrics.json",
+        "out-of-distribution metrics": ROOT / "results/ood_metrics.json",
         "figures incl. failure case": ROOT / "results/figures/restored_worst_1.png",
         "solution deck": next(iter((ROOT / "results").glob("*_KLA_PS01.pptx")), Path("missing")),
     }
