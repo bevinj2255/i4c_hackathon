@@ -1,6 +1,8 @@
+C:\Users\BEVIN\AppData\Roaming\Python\Python311\site-packages\torch\nn\modules\module.py:1357: UserWarning: expandable_segments not supported on this platform (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\c10/cuda/CUDAAllocatorConfig.h:35.)
+  return t.to(
 Config large_ft_perceptual: channels=96 blocks=24 -> 4,402,945 parameters
 Device: cuda (NVIDIA GeForce GTX 1650), AMP=False
-Train 3000 samples, val 200 images, batch 8, patch 0
+Train 3000 samples, val 200 images, batch 4, patch 0
 Initialised weights from weights/large_best.pt (epoch 138, best val 29.016 dB); optimiser and schedule start fresh
 C:\Users\BEVIN\AppData\Roaming\Python\Python311\site-packages\torchvision\models\_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.
   warnings.warn(
