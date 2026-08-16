@@ -9,3 +9,27 @@ C:\Users\BEVIN\AppData\Roaming\Python\Python311\site-packages\torchvision\models
 epoch    1/25  loss 0.06090  val PSNR 28.114 dB  lr 4.98e-05  246s
 epoch    2/25  loss 0.06001  val PSNR 28.182 dB  lr 4.92e-05  218s
 epoch    3/25  loss 0.05997  val PSNR 28.218 dB  lr 4.83e-05  199s
+epoch    4/25  loss 0.05956  val PSNR 28.229 dB  lr 4.69e-05  193s
+epoch    5/25  loss 0.05936  val PSNR 28.240 dB  lr 4.53e-05  189s
+epoch    6/25  loss 0.05919  val PSNR 28.265 dB  lr 4.33e-05  193s
+epoch    7/25  loss 0.05990  val PSNR 28.193 dB  lr 4.10e-05  188s
+epoch    8/25  loss 0.05918  val PSNR 28.148 dB  lr 3.85e-05  200s
+epoch    9/25  loss 0.05918  val PSNR 28.103 dB  lr 3.58e-05  202s
+epoch   10/25  loss 0.05894  val PSNR 28.118 dB  lr 3.29e-05  191s
+epoch   11/25  loss 0.05911  val PSNR 28.178 dB  lr 2.99e-05  189s
+epoch   12/25  loss 0.05868  val PSNR 28.147 dB  lr 2.68e-05  212s
+epoch   13/25  loss 0.05887  val PSNR 28.154 dB  lr 2.37e-05  228s
+epoch   14/25  loss 0.05864  val PSNR 28.158 dB  lr 2.06e-05  190s
+epoch   15/25  loss 0.05830  val PSNR 28.181 dB  lr 1.76e-05  186s
+epoch   16/25  loss 0.05840  val PSNR 28.150 dB  lr 1.47e-05  185s
+epoch   17/25  loss 0.05870  val PSNR 28.189 dB  lr 1.20e-05  188s
+epoch   18/25  loss 0.05829  val PSNR 28.184 dB  lr 9.47e-06  194s
+epoch   19/25  loss 0.05834  val PSNR 28.187 dB  lr 7.21e-06  197s
+epoch   20/25  loss 0.05828  val PSNR 28.176 dB  lr 5.23e-06  212s
+epoch   21/25  loss 0.05861  val PSNR 28.189 dB  lr 3.56e-06  207s
+epoch   22/25  loss 0.05810  val PSNR 28.236 dB  lr 2.24e-06  205s
+epoch   23/25  loss 0.05860  val PSNR 28.198 dB  lr 1.28e-06  198s
+epoch   24/25  loss 0.05849  val PSNR 28.209 dB  lr 6.95e-07  202s
+epoch   25/25  loss 0.05821  val PSNR 28.218 dB  lr 5.00e-07  210s
+
+Done. Best val PSNR 28.265 dB -> weights/perceptual_best.pt

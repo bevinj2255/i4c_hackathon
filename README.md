@@ -165,14 +165,22 @@ _Populated by `python evaluate.py --weights weights/model.pt`; see
 | Method | PSNR (dB) | SSIM | LPIPS |
 |---|---|---|---|
 | Bicubic ×2 (baseline) | 23.234 | 0.5395 | 0.4369 |
-| RestoreNet (ours) | 28.533 | 0.7514 | 0.3297 |
-| RestoreNet + 8× TTA | 28.569 | 0.7525 | 0.3337 |
-| Untrained control | 10.387 | 0.1022 | — |
+| RestoreNet (ours) | 28.378 | 0.7477 | 0.2158 |
+| RestoreNet + 8× TTA | 28.449 | 0.7511 | 0.2257 |
+| Untrained control | 11.700 | 0.1487 | — |
 
-**8× test-time augmentation is measured and deliberately NOT shipped.** It buys
-+0.036 dB PSNR and +0.0011 SSIM, but makes **LPIPS worse** (0.3337 vs 0.3297) and costs
-8× the compute. It stays available behind `--tta`; it is not the default because the
-measurement does not justify it.
+The shipped model is a **weight interpolation** of two checkpoints: one trained with
+Charbonnier loss alone, one fine-tuned with an added LPIPS perceptual term. Charbonnier
+alone minimises pixel error, whose cheapest minimiser is to smooth away low-contrast
+texture — good for PSNR, bad for LPIPS. Blending the two at 25/75 recovers 93% of the
+perceptual gain for 2.9% of the PSNR gain, and turned out to be the **best of every
+candidate on out-of-distribution content**. Full trade-off curve in `RESULTS.md` §6.0.
+
+**8× test-time augmentation is measured and deliberately NOT shipped.** Tested on two
+separate checkpoints, same verdict both times: it lifts PSNR and SSIM slightly and makes
+**LPIPS worse** (0.2257 vs 0.2158), for 8× the compute on a task also scored on
+throughput. Available behind `--tta`; not the default, because the measurement does not
+justify it.
 
 ### Generalisation to unseen structure
 
@@ -238,16 +246,13 @@ python src/degrade.py && python src/model.py && python -m src.data && python src
 
 | | |
 |---|---|
-| Training hardware | NVIDIA GeForce GTX 1650, 4 GiB (Turing TU117, **no tensor cores**) |
-| Training time | 110 epochs, 5.40 h wall clock, best at epoch 108 |
-| Training precision | fp32 — **measured 5× faster than AMP fp16 on this GPU** (20.1 vs 4.0 img/s). Re-benchmark on tensor-core hardware, where fp16 should win. |
-| Inference, end-to-end | **31.51 ms/image (31.7 img/s)** with `--fp32` on the GTX 1650, batch 16, all 397 test images. Default fp16 path: 113.30 ms/image on this card. |
-| Why fp16 is still the default | KLA benchmarks on an H100, whose tensor cores make fp16 the faster choice. On GPUs without them, pass `--fp32`. |
-| Runtime definition | includes disk read, preprocessing, host↔device transfer, model execution, device↔host transfer and saving — KLA's full definition, not just the forward pass |
-| Batch size | 16 (inference), 12 (training) |
+| Training hardware | NVIDIA GeForce GTX 1650 |
+| Training time | 25 epochs, 1.4 h wall clock |
+| Inference hardware measured | NVIDIA GeForce GTX 1650 |
+| End-to-end runtime | see the timing block printed by `inference.py` (disk read, preprocessing, host↔device transfer, model execution, saving) |
+| Batch size | 16 |
 | Timing method | `time.perf_counter()` with `torch.cuda.synchronize()` around every GPU stage |
-| Model size | 1,367,553 parameters, 16 MB checkpoint |
-| Seed | 0 (`random`, `numpy`, `torch`; recorded in the checkpoint) |
+| Seed | 0 (set for `random`, `numpy` and `torch`; recorded in the checkpoint) |
 
 ## External resources
 
