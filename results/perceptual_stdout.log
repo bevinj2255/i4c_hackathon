@@ -6,3 +6,6 @@ C:\Users\BEVIN\AppData\Roaming\Python\Python311\site-packages\torchvision\models
   warnings.warn(
 C:\Users\BEVIN\AppData\Roaming\Python\Python311\site-packages\torchvision\models\_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=AlexNet_Weights.IMAGENET1K_V1`. You can also use `weights=AlexNet_Weights.DEFAULT` to get the most up-to-date weights.
   warnings.warn(msg)
+epoch    1/25  loss 0.06090  val PSNR 28.114 dB  lr 4.98e-05  246s
+epoch    2/25  loss 0.06001  val PSNR 28.182 dB  lr 4.92e-05  218s
+epoch    3/25  loss 0.05997  val PSNR 28.218 dB  lr 4.83e-05  199s
