@@ -263,6 +263,9 @@ def main():
         "The failure case is the WORST of 200 validation images by PSNR - selected by "
         "measurement, not chosen by eye.",
         "Known limitations, stated plainly:",
+        "  Charbonnier loss favours smooth solutions, so fine low-contrast texture in "
+        "dark regions is over-smoothed. Visible in the median case, and the reason "
+        "LPIPS improves less than PSNR does.",
         "  Trained and validated only on x2. 256->512 is supported by construction "
         "(fully convolutional) but is not represented in the released data.",
         "  Very dark regions carry little speckle signal, so there is less to recover "
@@ -292,6 +295,11 @@ def main():
     out = Path(a.out or f"results/{a.team.replace(' ', '')}_KLA_PS01.pptx")
     out.parent.mkdir(parents=True, exist_ok=True)
     prs.save(out)
+    # Second copy under the name KLA's recommended repository structure lists. The
+    # portal wants TeamName_KLA_PS01.pdf; the repo wants solution_presentation.pptx.
+    # .gitignore ignores *.pptx but un-ignores this one, so without it the deck would
+    # silently never reach the repository.
+    prs.save(Path("solution_presentation.pptx"))
     print(f"CHECK: wrote {out} ({len(prs.slides)} slides)")
     missing = [k for k in ("bicubic", "RestoreNet") if fmt(m, k, "psnr") == "TBD"]
     if missing:
