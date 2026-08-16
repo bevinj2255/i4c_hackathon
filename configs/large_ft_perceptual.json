@@ -1,0 +1,23 @@
+{
+  "name": "large_ft_perceptual",
+  "channels": 96,
+  "blocks": 24,
+  "scale": 2,
+  "res_scale": 0.1,
+  "patch": 0,
+  "batch_size": 16,
+  "lr": 5e-5,
+  "epochs": 25,
+  "overfit_epochs": 300,
+  "p_synth": 0.5,
+  "p_pattern": 0.0,
+  "edge_weight": 0.0,
+  "lpips_weight": 0.10,
+  "amp": true,
+  "workers": 4,
+  "seed": 0,
+  "_purpose": "Fine-tune the 4.4M large checkpoint with an LPIPS perceptual term. The large run used Charbonnier alone, which is why it leads on PSNR/SSIM (29.016 / 0.7643) but trails badly on LPIPS (0.3099 vs 0.2158 for the shipped 1.37M model). This closes that gap the same way the small model's was closed.",
+  "_launch": "python train.py --config configs/large_ft_perceptual.json --init_from weights/large_best.pt",
+  "_then": "Interpolate large_best and large_ft_perceptual_best (see RESULTS.md 6.0) and ship whichever point wins on all three metrics.",
+  "_amp_note": "amp true suits the RTX 4050. On a GPU without tensor cores set it false -- measured 5x either way."
+}
