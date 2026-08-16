@@ -1,0 +1,22 @@
+{
+  "name": "large_perceptual",
+  "channels": 96,
+  "blocks": 24,
+  "scale": 2,
+  "res_scale": 0.1,
+  "patch": 0,
+  "batch_size": 16,
+  "lr": 2e-4,
+  "epochs": 150,
+  "overfit_epochs": 300,
+  "p_synth": 0.5,
+  "p_pattern": 0.0,
+  "edge_weight": 0.0,
+  "lpips_weight": 0.10,
+  "amp": true,
+  "workers": 4,
+  "seed": 0,
+  "_purpose": "For a GPU with more than 6 GB and tensor cores. Combines the two things measured to matter: ~3x the capacity (4.4M vs 1.37M parameters) and a perceptual LPIPS term in the loss, which is where the base model is weakest.",
+  "_amp_note": "amp:true assumes tensor cores. BENCHMARK IT: on a GTX 16-series card fp16 was measured 5x SLOWER than fp32. Run --benchmark with true and with false, keep the faster.",
+  "_ship_rule": "Compare against the current model on BOTH evaluate.py and ood_check.py, and on inference speed. KLA scores throughput too, so a 3x larger model must earn its cost."
+}

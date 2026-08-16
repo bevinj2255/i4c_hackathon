@@ -1,0 +1,20 @@
+Config finetune_ood: channels=64 blocks=16 -> 1,367,553 parameters
+Device: cuda (NVIDIA GeForce GTX 1650), AMP=False
+Train 3000 samples, val 200 images, batch 12, patch 0
+Initialised weights from weights/base_best.pt (epoch 107, best val 28.533 dB); optimiser and schedule start fresh
+epoch    1/20  loss 0.03715  val PSNR 28.273 dB  lr 4.97e-05  172s
+epoch    2/20  loss 0.03648  val PSNR 28.311 dB  lr 4.88e-05  176s
+epoch    3/20  loss 0.03555  val PSNR 28.306 dB  lr 4.73e-05  170s
+epoch    4/20  loss 0.03603  val PSNR 28.314 dB  lr 4.53e-05  174s
+epoch    5/20  loss 0.03532  val PSNR 28.291 dB  lr 4.28e-05  174s
+epoch    6/20  loss 0.03532  val PSNR 28.295 dB  lr 3.98e-05  176s
+epoch    7/20  loss 0.03582  val PSNR 28.302 dB  lr 3.65e-05  177s
+epoch    8/20  loss 0.03581  val PSNR 28.268 dB  lr 3.29e-05  177s
+epoch    9/20  loss 0.03549  val PSNR 28.256 dB  lr 2.91e-05  178s
+epoch   10/20  loss 0.03532  val PSNR 28.250 dB  lr 2.53e-05  180s
+epoch   11/20  loss 0.03547  val PSNR 28.303 dB  lr 2.14e-05  180s
+epoch   12/20  loss 0.03549  val PSNR 28.287 dB  lr 1.76e-05  178s
+epoch   13/20  loss 0.03602  val PSNR 28.279 dB  lr 1.40e-05  177s
+epoch   14/20  loss 0.03566  val PSNR 28.292 dB  lr 1.07e-05  177s
+epoch   15/20  loss 0.03497  val PSNR 28.293 dB  lr 7.75e-06  178s
+epoch   16/20  loss 0.03485  val PSNR 28.285 dB  lr 5.23e-06  4714s
