@@ -193,6 +193,13 @@ def main():
 
     cfg = json.loads(Path(a.config).read_text())
     name = cfg.get("name", Path(a.config).stem)
+    if a.overfit:
+        # The sanity check must never write to the real run's filenames. It did once:
+        # running the gate on configs/perceptual.json overwrote weights/perceptual_best.pt
+        # -- a genuine 25-epoch checkpoint replaced by a 2-image throwaway. Nothing warned,
+        # because writing a checkpoint is exactly what training is supposed to do.
+        # Two runs must never be able to overwrite each other's results.
+        name = f"{name}_overfit"
     if a.epochs:
         cfg["epochs"] = a.epochs
     set_seed(cfg.get("seed", 0))
