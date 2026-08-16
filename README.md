@@ -165,9 +165,9 @@ _Populated by `python evaluate.py --weights weights/model.pt`; see
 | Method | PSNR (dB) | SSIM | LPIPS |
 |---|---|---|---|
 | Bicubic ×2 (baseline) | 23.234 | 0.5395 | 0.4369 |
-| RestoreNet (ours) | 26.753 | 0.6537 | 0.3894 |
+| RestoreNet (ours) | 28.465 | 0.7489 | 0.3413 |
 | RestoreNet + 8× TTA | _pending_ | _pending_ | _pending_ |
-| Untrained control | 11.447 | 0.1503 | — |
+| Untrained control | 11.829 | 0.1046 | — |
 
 Figures in `results/figures/`: dataset sample, degradation analysis, training curve,
 and restoration examples.
@@ -215,12 +215,13 @@ python src/degrade.py && python src/model.py && python -m src.data && python src
 
 | | |
 |---|---|
-| Training hardware | NVIDIA GeForce GTX 1650 |
-| Training time | 5 epochs, 0.3 h wall clock |
-| Inference hardware measured | NVIDIA GeForce GTX 1650 |
-| End-to-end runtime | see the timing block printed by `inference.py` (disk read, preprocessing, host↔device transfer, model execution, saving) |
-| Batch size | 16 |
-| Timing method | `time.perf_counter()` with `torch.cuda.synchronize()` around every GPU stage |
+| Training hardware | NVIDIA GeForce GTX 1650 (4 GiB, Turing TU117, no tensor cores) |
+| Training time | 72 epochs so far, 3.6 h wall clock (run in progress, 110 planned) |
+| Inference hardware measured | GTX 1650 / CPU; KLA benchmarks on H100 |
+| End-to-end runtime | reported by `inference.py` itself (disk read, preprocessing, host↔device transfer, model execution, saving) |
+| Batch size | 16 for inference, 12 for training |
+| Timing method | `time.perf_counter()`, with `torch.cuda.synchronize()` around every GPU stage |
+| Precision | fp32 — measured 5× faster than AMP fp16 on this GPU (no tensor cores) |
 | Seed | 0 (set for `random`, `numpy` and `torch`; recorded in the checkpoint) |
 
 ## External resources

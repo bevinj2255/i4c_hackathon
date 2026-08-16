@@ -64,3 +64,16 @@ epoch   57/110  loss 0.03536  val PSNR 28.377 dB  lr 9.53e-05  175s
 epoch   58/110  loss 0.03532  val PSNR 28.404 dB  lr 9.25e-05  176s
 epoch   59/110  loss 0.03501  val PSNR 28.423 dB  lr 8.97e-05  174s
 epoch   60/110  loss 0.03517  val PSNR 28.427 dB  lr 8.69e-05  176s
+epoch   61/110  loss 0.03506  val PSNR 28.452 dB  lr 8.41e-05  182s
+epoch   62/110  loss 0.03504  val PSNR 28.410 dB  lr 8.13e-05  175s
+epoch   63/110  loss 0.03516  val PSNR 28.436 dB  lr 7.86e-05  174s
+epoch   64/110  loss 0.03507  val PSNR 28.420 dB  lr 7.58e-05  172s
+epoch   65/110  loss 0.03505  val PSNR 28.423 dB  lr 7.31e-05  173s
+epoch   66/110  loss 0.03510  val PSNR 28.434 dB  lr 7.04e-05  173s
+epoch   67/110  loss 0.03498  val PSNR 28.444 dB  lr 6.77e-05  174s
+epoch   68/110  loss 0.03497  val PSNR 28.465 dB  lr 6.51e-05  175s
+epoch   69/110  loss 0.03500  val PSNR 28.463 dB  lr 6.25e-05  175s
+epoch   70/110  loss 0.03505  val PSNR 28.446 dB  lr 5.99e-05  174s
+epoch   71/110  loss 0.03498  val PSNR 28.473 dB  lr 5.73e-05  198s
+epoch   72/110  loss 0.03505  val PSNR 28.480 dB  lr 5.48e-05  210s
+epoch   73/110  loss 0.03501  val PSNR 28.479 dB  lr 5.23e-05  194s
