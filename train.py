@@ -189,6 +189,14 @@ def main():
                     help="overfit this many images as a pipeline sanity check")
     ap.add_argument("--benchmark", action="store_true")
     ap.add_argument("--epochs", type=int, default=None, help="override config epochs")
+    ap.add_argument("--batch_size", type=int, default=None,
+                    help="override config batch size (for a smaller GPU)")
+    ap.add_argument("--workers", type=int, default=None,
+                    help="override dataloader workers. On Windows each worker re-imports "
+                         "torch; too many exhausts the page file (WinError 1455). Use 0.")
+    ap.add_argument("--amp", choices=("true", "false"), default=None,
+                    help="override mixed precision. Benchmark it: fp16 is much faster "
+                         "with tensor cores and much SLOWER without.")
     a = ap.parse_args()
 
     cfg = json.loads(Path(a.config).read_text())
@@ -202,6 +210,14 @@ def main():
         name = f"{name}_overfit"
     if a.epochs:
         cfg["epochs"] = a.epochs
+    if a.batch_size:
+        cfg["batch_size"] = a.batch_size
+    if a.workers is not None:
+        cfg["workers"] = a.workers
+    if a.workers is not None:
+        cfg["workers"] = a.workers
+    if a.amp is not None:
+        cfg["amp"] = (a.amp == "true")
     set_seed(cfg.get("seed", 0))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
