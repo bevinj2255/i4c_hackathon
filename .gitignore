@@ -25,3 +25,6 @@ results/train_stdout.log
 
 # Internal working-methodology file, not part of the submission.
 CLAUDE.md
+
+# The official i4C template, downloaded for reference; not our work.
+idea_template.pptx

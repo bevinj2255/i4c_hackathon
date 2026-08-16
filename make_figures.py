@@ -125,6 +125,42 @@ def training_curve():
     print("  training_curve.png")
 
 
+def slide_strip(gt_dir, lr_dir, names, model, device, n=5):
+    """A wide, short before/after strip sized for the deck's free space.
+
+    The template leaves roughly 11.1 x 1.1 inches under the metric boxes, so this is
+    built at a ~10:1 aspect on purpose rather than shrinking a square figure until the
+    text is unreadable.
+    """
+    picks, seen = [], set()
+    for nm in names:
+        lr, gt = np.load(lr_dir / nm), np.load(gt_dir / nm)
+        if gt.std() < 0.12:          # skip near-flat frames, they show nothing
+            continue
+        with torch.no_grad():
+            pred = model.restore(torch.from_numpy(lr)[None, None].to(device))
+        picks.append((lr, pred[0, 0].float().cpu().numpy()))
+        seen.add(nm)
+        if len(picks) == n:
+            break
+    fig, axes = plt.subplots(1, 2 * len(picks), figsize=(2 * len(picks) * 1.05, 1.18))
+    for i, (lr, pred) in enumerate(picks):
+        up = F.interpolate(torch.from_numpy(lr)[None, None].float(), scale_factor=2,
+                           mode="nearest")[0, 0].numpy()
+        for j, (img, lab) in enumerate(((np.clip(up, 0, 1), "degraded"),
+                                        (pred, "restored"))):
+            ax = axes[2 * i + j]
+            ax.imshow(img, cmap="gray", vmin=0, vmax=1, interpolation="nearest")
+            ax.set_xticks([]); ax.set_yticks([])
+            for sp in ax.spines.values():
+                sp.set_edgecolor("#c00" if j == 0 else "#0a0"); sp.set_linewidth(1.2)
+            ax.set_title(lab, fontsize=6, pad=1.5)
+    fig.subplots_adjust(left=0.002, right=0.998, top=0.86, bottom=0.02, wspace=0.06)
+    fig.savefig(OUT / "slide_result.png", dpi=220)
+    plt.close(fig)
+    print("  slide_result.png  (deck strip)")
+
+
 def triptych(lr, pred, gt, path, title):
     up = F.interpolate(torch.from_numpy(lr)[None, None].float(), scale_factor=2,
                        mode="bicubic", align_corners=False).clamp_(0, 1)[0, 0].numpy()
@@ -201,6 +237,11 @@ def main():
              f"{pm:.2f} dB vs bicubic {pb:.2f} dB ({g:+.2f} dB)")
     print(f"  restored_median.png  ({nm}, {pm:.2f} dB, {g:+.2f} vs bicubic)  <- representative")
 
+    slide_strip(gt_dir, lr_dir, val_names, model, device)
+
+    # Re-bind to the WORST case. Losing this line once made the "failure case" figure
+    # silently show the median image instead -- a figure that claims to be the worst
+    # result but is not is worse than no figure at all.
     g, pm, pb, nm, lr, pred, gt = by_gain[0]
     triptych(lr, pred, gt, OUT / "restored_worst_1.png",
              f"Failure case -- {nm}: worst of {len(scored)} by gain over baseline, "
