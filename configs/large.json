@@ -7,7 +7,7 @@
   "patch": 0,
   "batch_size": 16,
   "lr": 0.0002,
-  "epochs": 200,
+  "epochs": 147,
   "overfit_epochs": 300,
   "p_synth": 0.5,
   "edge_weight": 0.0,
