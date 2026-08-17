@@ -70,6 +70,11 @@ def main():
     ap.add_argument("--members", default="MEMBER 1 (role), MEMBER 2 (role)")
     ap.add_argument("--college", default="COLLEGE NAME")
     ap.add_argument("--contact", default="EMAIL / PHONE")
+    ap.add_argument("--phone", default="")
+    ap.add_argument("--year", default="4th Year")
+    ap.add_argument("--ms_per_image", default=None,
+                    help="measured end-to-end ms/image for the deck. Read from the "
+                         "inference run below if not given.")
     ap.add_argument("--skip_tta", action="store_true",
                     help="skip the 8x TTA evaluation (it is slow)")
     ap.add_argument("--device", default=None,
@@ -156,8 +161,15 @@ def main():
     })
 
     # 7. Deck.
-    run(["make_ppt.py", "--team", a.team, "--members", a.members,
-         "--college", a.college, "--contact", a.contact, "--gpu", gpu], "submission deck")
+    # Every argument the deck needs must be forwarded. Omitting --phone and --year
+    # silently produced a deck with a blank contact number and the wrong academic year:
+    # make_ppt fell back to its defaults and nothing reported a problem.
+    deck = ["make_ppt.py", "--team", a.team, "--members", a.members,
+            "--college", a.college, "--contact", a.contact, "--gpu", gpu,
+            "--phone", a.phone, "--year", a.year]
+    if a.ms_per_image:
+        deck += ["--ms_per_image", a.ms_per_image]
+    run(deck, "submission deck")
 
     # 8. The checklist, as an assertion rather than a hope.
     print("\n=== KLA mandatory deliverables ===")
