@@ -1,0 +1,23 @@
+{
+  "name": "large_perc_long",
+  "channels": 96,
+  "blocks": 24,
+  "scale": 2,
+  "res_scale": 0.1,
+  "patch": 0,
+  "batch_size": 4,
+  "lr": 1e-4,
+  "epochs": 40,
+  "overfit_epochs": 300,
+  "p_synth": 0.5,
+  "p_pattern": 0.0,
+  "edge_weight": 0.0,
+  "lpips_weight": 0.10,
+  "amp": false,
+  "workers": 0,
+  "seed": 0,
+  "_purpose": "Longer, higher-LR perceptual training from the large checkpoint. The shipped fine-tune was deliberately gentle (25 epochs, lr 5e-5) and cost 0.34 dB PSNR (29.016 -> 28.676) to reach LPIPS 0.1811. At lr 1e-4 over 40 epochs the network can reorganise rather than merely adjust, which may hold the LPIPS gain while recovering some PSNR.",
+  "_one_variable": "Only lr and epochs differ from large_ft_perceptual.json. lpips_weight stays 0.10 so the comparison isolates schedule length, not loss weighting.",
+  "_launch": "python train.py --config configs/large_perc_long.json --init_from weights/large_best.pt --batch_size 4 --amp false --workers 0",
+  "_ship_rule": "Ship only if it beats the current model (28.676 / 0.7543 / 0.1811) on PSNR and SSIM WITHOUT losing LPIPS, or improves all three. A trade is not an upgrade -- we already have the best trade."
+}
