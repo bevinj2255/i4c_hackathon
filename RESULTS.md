@@ -248,6 +248,39 @@ nothing.
 
 ---
 
+## 3.2 Inference robustness — what a reviewer's directory might actually contain
+
+`inference.py` is run as-is by KLA's benchmarking team, so it was probed with inputs
+beyond the 128×128 squares it was developed on. All produce exactly 2× outputs, float32,
+clamped to [0,1], with filenames preserved:
+
+| Input | Shape in | Shape out |
+|---|---|---|
+| square (released test size) | 128×128 | 256×256 |
+| square (the brief's other size) | 256×256 | 512×512 |
+| non-square | 128×192 | 256×384 |
+| odd dimensions | 127×129 | 254×258 |
+| prime dimensions | 97×101 | 194×202 |
+| very small | 16×16 | 32×32 |
+| extreme aspect ratio | 32×512 | 64×1024 |
+
+All inputs were deliberately generated outside [0,1], as the real degraded data is.
+
+**Malformed files no longer abort the run.** Previously a single unreadable file raised a
+bare numpy traceback that did not even name it — one stray file in a directory would have
+killed an otherwise healthy 397-image benchmark, and the reviewer would reasonably have
+recorded the submission as failing to run. Now each offending file is named with its
+reason and skipped, and the run aborts only if nothing at all is readable:
+
+```
+WARNING: skipped 2 file(s) that do not meet the input contract (single-channel 2-D .npy):
+    corrupt.npy: unreadable: ValueError
+    rgb_3channel.npy: shape (64, 64, 3) is not single-channel 2-D
+```
+
+(H,W,1) and (1,H,W) arrays are squeezed rather than rejected, since those are the same
+data in a different wrapper.
+
 ## 4. Environment
 
 | Item | Value | How |

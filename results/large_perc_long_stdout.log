@@ -12,3 +12,5 @@ epoch    4/40  loss 0.05859  val PSNR 28.479 dB  lr 9.76e-05  482s
 epoch    5/40  loss 0.05785  val PSNR 28.390 dB  lr 9.62e-05  478s
 epoch    6/40  loss 0.05769  val PSNR 28.345 dB  lr 9.46e-05  492s
 epoch    7/40  loss 0.05772  val PSNR 28.375 dB  lr 9.27e-05  473s
+epoch    8/40  loss 0.05790  val PSNR 28.451 dB  lr 9.05e-05  502s
+epoch    9/40  loss 0.05719  val PSNR 28.442 dB  lr 8.81e-05  572s

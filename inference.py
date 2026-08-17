@@ -110,12 +110,35 @@ def main():
     # not crash.
     by_shape = defaultdict(list)
     t = time.perf_counter()
-    arrays = {}
+    arrays, skipped = {}, []
     for f in files:
-        arr = np.load(f).astype(np.float32)
+        # A file that cannot be read must name itself and not abort the run. Left
+        # unguarded this raised a bare numpy traceback that did not say which file was
+        # at fault -- and one stray file in a directory would have killed a 397-image
+        # benchmark that was otherwise fine.
+        try:
+            arr = np.load(f)
+        except Exception as e:
+            skipped.append((f.name, f"unreadable: {type(e).__name__}"))
+            continue
+        arr = np.squeeze(arr)                       # tolerate (H,W,1) / (1,H,W)
+        if arr.ndim != 2:
+            skipped.append((f.name, f"shape {np.load(f).shape} is not single-channel 2-D"))
+            continue
+        arr = arr.astype(np.float32)
         arrays[f] = arr
         by_shape[arr.shape].append(f)
     t_read = time.perf_counter() - t
+
+    if skipped:
+        print(f"\nWARNING: skipped {len(skipped)} file(s) that do not meet the input "
+              f"contract (single-channel 2-D .npy):")
+        for name, why in skipped[:10]:
+            print(f"    {name}: {why}")
+    if not arrays:
+        raise SystemExit(f"ABORT: none of the {len(files)} files in {a.input_dir} "
+                         f"could be read as single-channel 2-D arrays")
+    files = [f for f in files if f in arrays]
 
     t_transfer = t_model = t_save = 0.0
     written = 0
