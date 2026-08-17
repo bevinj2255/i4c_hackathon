@@ -266,7 +266,8 @@ def main():
                               num_workers=workers, pin_memory=device.type == "cuda",
                               drop_last=True,
                               persistent_workers=workers > 0)
-    val_loader = DataLoader(EvalDataset(val_names, gt_dir, lr_dir), batch_size=8,
+    val_loader = DataLoader(EvalDataset(val_names, gt_dir, lr_dir),
+                            batch_size=min(8, cfg["batch_size"]),
                             shuffle=False, num_workers=0,
                             pin_memory=device.type == "cuda")
     print(f"Train {len(train_set)} samples, val {len(val_names)} images, "
@@ -318,6 +319,13 @@ def main():
         if first_loss is None:
             first_loss = train_loss
         val_psnr = validate(model, val_loader, device, amp)
+        # Free cached-but-unused blocks once per epoch. Two long runs died in the
+        # backward pass after several healthy epochs -- batch 8 at epoch 2, batch 4 at
+        # epoch 4. A smaller batch only delayed it, which is the signature of
+        # fragmentation accumulating across epochs rather than a step that is too big
+        # to fit. On a 4 GiB card that headroom matters.
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
         dt = time.perf_counter() - t0
         print(f"epoch {epoch + 1:4d}/{cfg['epochs']}  loss {train_loss:.5f}  "
               f"val PSNR {val_psnr:.3f} dB  lr {sched.get_last_lr()[0]:.2e}  {dt:.0f}s")
