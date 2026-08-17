@@ -281,6 +281,28 @@ WARNING: skipped 2 file(s) that do not meet the input contract (single-channel 2
 (H,W,1) and (1,H,W) arrays are squeezed rather than rejected, since those are the same
 data in a different wrapper.
 
+## 3.3 Does the x2 claim hold at the other scale?
+
+The brief mentions 512x512 ground truth, but every released pair is 256->128 and the
+model has only ever trained on 128x128 inputs. Shape correctness was verified early;
+quality was not. No 512x512 ground truth exists in the dataset, so this uses synthetic
+patterns generated at both sizes and degraded with the measured forward model, which
+gives a real reference at 512.
+
+| Scale | bicubic | ours | gain | our SSIM |
+|---|---|---|---|---|
+| 128 -> 256 (trained scale) | 20.89 dB | 25.20 dB | **+4.31** | 0.8866 |
+| 256 -> 512 (never trained) | 18.58 dB | 21.58 dB | **+3.00** | 0.8555 |
+
+The model transfers to the untrained scale and still clearly beats the baseline, though
+the gain is about 30% smaller. That is expected: at 512 the same 72-pixel receptive field
+covers proportionally less of the structure, and the noise level relative to feature size
+differs from anything seen in training.
+
+**Do not read the absolute dB across rows.** The two scales use different synthetic
+content, so only the gain over bicubic *within* a row is comparable. Reporting the raw
+numbers side by side without this note would invite exactly that mistake.
+
 ## 4. Environment
 
 | Item | Value | How |

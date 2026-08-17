@@ -146,7 +146,10 @@ Two deliberate departures from a stock EDSR:
   noisy, so that path would pipe speckle straight into the prediction. The long skip
   runs from the head features instead.
 - **Fully convolutional, no hardcoded sizes**, so the same weights restore 128→256 and
-  256→512. All released data is ×2; the brief also mentions 512×512 ground truth.
+  256→512. All released data is ×2; the brief also mentions 512×512 ground truth. This is
+  measured, not just asserted: on synthetic patterns the model gains **+4.31 dB** over
+  bicubic at the trained 128→256 scale and **+3.00 dB** at 256→512, which it has never
+  seen (`RESULTS.md` §3.3).
 
 Loss is Charbonnier (smooth L1), with an optional edge term (`edge_weight` in the config)
 evaluated as a separate one-variable experiment.
