@@ -465,6 +465,43 @@ TTA re-tested on this checkpoint and rejected for a third time: 28.807 / 0.7594 
 
 Still beats bicubic on 200/200 validation images.
 
+## 5.3 Longer perceptual schedule — measured, and NOT shipped
+
+Tested whether the 0.34 dB PSNR given up by the shipped fine-tune was recoverable with a
+longer, higher-LR schedule. One variable changed: 40 epochs at lr 1e-4 against 25 epochs
+at lr 5e-5, with lpips_weight held at 0.10. 6.72 h on the GTX 1650, best at epoch 27.
+
+| | shipped (25 ep, 5e-5) | longer (40 ep, 1e-4) |
+|---|---|---|
+| PSNR | 28.676 | **28.704** |
+| SSIM | 0.7543 | **0.7556** |
+| LPIPS | 0.1811 | **0.1686** |
+| OOD mean gain | **+2.32 dB** | +1.75 dB |
+| OOD patterns won | **13/15** | 12/15 |
+| OOD worst case | **−2.54 dB** | −3.36 dB |
+
+**It won the validation split on all three metrics and was still rejected.**
+
+The ship rule written into `configs/large_perc_long.json` said: beat the current model on
+PSNR and SSIM without losing LPIPS, or improve all three. It improved all three. The rule
+was incomplete — it never mentioned out-of-distribution performance, and that is where the
+longer schedule pays for its in-distribution gains.
+
+The magnitudes settle it. The validation gains are +0.028 dB PSNR, +0.0013 SSIM and
+0.0125 LPIPS: real but close to noise. The OOD regression is −0.57 dB mean with a worst
+case 0.8 dB worse. KLA states the hidden test set contains out-of-distribution content, so
+that axis is not optional. Normalised per axis against the better of the two, the shipped
+model wins on worst-axis (0.95 vs 0.75) and on total (3.94 vs 3.75).
+
+Interpretation: training the perceptual objective harder and longer sharpens the model on
+content resembling its training distribution and makes it *less* general. That is a
+coherent result, not an anomaly, and it is the second time an obvious-looking upgrade has
+failed on this project.
+
+Recording it as a negative result and leaving the submission unchanged. The checkpoint is
+kept at `weights/large_perc_long_best.pt` in case the OOD probe is later judged
+unrepresentative.
+
 ## 6. Final metrics
 
 200-image held-out split, never trained on, sole basis for model selection.

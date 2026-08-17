@@ -15,3 +15,36 @@ epoch    7/40  loss 0.05772  val PSNR 28.375 dB  lr 9.27e-05  473s
 epoch    8/40  loss 0.05790  val PSNR 28.451 dB  lr 9.05e-05  502s
 epoch    9/40  loss 0.05719  val PSNR 28.442 dB  lr 8.81e-05  572s
 epoch   10/40  loss 0.05769  val PSNR 28.600 dB  lr 8.55e-05  550s
+epoch   11/40  loss 0.05705  val PSNR 28.582 dB  lr 8.26e-05  497s
+epoch   12/40  loss 0.05690  val PSNR 28.600 dB  lr 7.96e-05  494s
+epoch   13/40  loss 0.05655  val PSNR 28.495 dB  lr 7.64e-05  504s
+epoch   14/40  loss 0.05682  val PSNR 28.506 dB  lr 7.30e-05  498s
+epoch   15/40  loss 0.05683  val PSNR 28.538 dB  lr 6.94e-05  496s
+epoch   16/40  loss 0.05654  val PSNR 28.435 dB  lr 6.58e-05  497s
+epoch   17/40  loss 0.05638  val PSNR 28.480 dB  lr 6.21e-05  496s
+epoch   18/40  loss 0.05603  val PSNR 28.684 dB  lr 5.82e-05  497s
+epoch   19/40  loss 0.05626  val PSNR 28.572 dB  lr 5.44e-05  498s
+epoch   20/40  loss 0.05605  val PSNR 28.567 dB  lr 5.05e-05  498s
+epoch   21/40  loss 0.05588  val PSNR 28.652 dB  lr 4.66e-05  506s
+epoch   22/40  loss 0.05565  val PSNR 28.657 dB  lr 4.28e-05  498s
+epoch   23/40  loss 0.05563  val PSNR 28.522 dB  lr 3.89e-05  499s
+epoch   24/40  loss 0.05560  val PSNR 28.630 dB  lr 3.52e-05  499s
+epoch   25/40  loss 0.05516  val PSNR 28.651 dB  lr 3.16e-05  501s
+epoch   26/40  loss 0.05532  val PSNR 28.609 dB  lr 2.80e-05  501s
+epoch   27/40  loss 0.05529  val PSNR 28.704 dB  lr 2.46e-05  501s
+epoch   28/40  loss 0.05496  val PSNR 28.667 dB  lr 2.14e-05  507s
+epoch   29/40  loss 0.05481  val PSNR 28.552 dB  lr 1.84e-05  503s
+epoch   30/40  loss 0.05476  val PSNR 28.574 dB  lr 1.55e-05  4376s
+epoch   31/40  loss 0.05462  val PSNR 28.650 dB  lr 1.29e-05  486s
+epoch   32/40  loss 0.05474  val PSNR 28.630 dB  lr 1.05e-05  521s
+epoch   33/40  loss 0.05483  val PSNR 28.608 dB  lr 8.29e-06  514s
+epoch   34/40  loss 0.05431  val PSNR 28.635 dB  lr 6.40e-06  514s
+epoch   35/40  loss 0.05436  val PSNR 28.647 dB  lr 4.77e-06  509s
+epoch   36/40  loss 0.05422  val PSNR 28.631 dB  lr 3.42e-06  495s
+epoch   37/40  loss 0.05430  val PSNR 28.681 dB  lr 2.37e-06  497s
+epoch   38/40  loss 0.05432  val PSNR 28.661 dB  lr 1.61e-06  502s
+epoch   39/40  loss 0.05471  val PSNR 28.661 dB  lr 1.15e-06  510s
+epoch   40/40  loss 0.05424  val PSNR 28.652 dB  lr 1.00e-06  505s
+
+Done. Best val PSNR 28.704 dB -> weights/large_perc_long_best.pt
+[W817 18:26:22.000000000 AllocatorConfig.cpp:28] Warning: PYTORCH_CUDA_ALLOC_CONF is deprecated, use PYTORCH_ALLOC_CONF instead (function operator ())
