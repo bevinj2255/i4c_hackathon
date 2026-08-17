@@ -173,17 +173,18 @@ _Populated by `python evaluate.py --weights weights/model.pt`; see
 | Untrained control | 10.354 | 0.1785 | — |
 
 The shipped model is a **weight interpolation** of two checkpoints: one trained with
-Charbonnier loss alone, one fine-tuned with an added LPIPS perceptual term. Charbonnier
+Charbonnier loss alone, then fine-tuned with an added LPIPS perceptual term. Charbonnier
 alone minimises pixel error, whose cheapest minimiser is to smooth away low-contrast
-texture — good for PSNR, bad for LPIPS. Blending the two at 25/75 recovers 93% of the
-perceptual gain for 2.9% of the PSNR gain, and turned out to be the **best of every
-candidate on out-of-distribution content**. Full trade-off curve in `RESULTS.md` §6.0.
+texture — good for PSNR, bad for LPIPS. The perceptual fine-tune is the shipped model: it
+beats the Charbonnier-only checkpoint's blend on all three metrics at once rather than
+trading between them. The full interpolation curve between the two, and why no blend was
+needed, is in `RESULTS.md` §5.2.
 
-**8× test-time augmentation is measured and deliberately NOT shipped.** Tested on two
-separate checkpoints, same verdict both times: it lifts PSNR and SSIM slightly and makes
-**LPIPS worse** (0.2257 vs 0.2158), for 8× the compute on a task also scored on
-throughput. Available behind `--tta`; not the default, because the measurement does not
-justify it.
+**8× test-time augmentation is measured and deliberately NOT shipped.** Tested on three
+separate checkpoints, same verdict every time: it lifts PSNR and SSIM slightly and makes
+**LPIPS worse** (0.1921 vs 0.1811 on the shipped model), for 8× the compute on a task also
+scored on throughput. Available behind `--tta`; not the default, because the measurement
+does not justify it.
 
 ### Generalisation to unseen structure
 
@@ -192,16 +193,17 @@ semiconductor-like patterns it has never seen (`python ood_check.py`) — gratin
 pitches and angles, contact arrays, checkerboards, step edges, and a periodic field
 containing a missing contact plus a bridging defect.
 
-| | epoch 1 | epoch 60 | final |
+| Pattern | bicubic | ours | gain |
 |---|---|---|---|
-| mean PSNR gain vs bicubic | −0.85 dB | +2.10 dB | **+2.56 dB** |
-| patterns where bicubic wins | 10/15 | 3/15 | **1/15** |
-| step edges | +7.18 dB | +11.70 dB | **+12.20 dB** (SSIM 0.296 → 0.970) |
-| defect array | −0.05 dB | +2.04 dB | **+2.18 dB** (SSIM 0.628 → 0.808) |
+| step edges | 22.13 dB | **34.39 dB** | **+12.26** (SSIM 0.296 → 0.957) |
+| defect array (missing contact + bridge) | 15.80 dB | **17.91 dB** | **+2.11** (SSIM 0.628 → 0.815) |
+| 4-pixel checkerboard (worst) | 13.08 dB | 10.54 dB | -2.54 |
+| **mean over all 15** | — | — | **+2.32 dB**, ahead on 13/15 |
 
-The single remaining loss is a 4-pixel checkerboard (−0.79 dB), which after a 2×2 area
-downsample lands on the box filter's null — the contrast is destroyed, not corrupted, so
-no method recovers it. Reported rather than hidden.
+The 2 losses (checker_4 -2.54 dB, grating_p6_a0 -1.54 dB) are the
+finest periodic structures. After a 2×2 area downsample they land on the box filter's
+null, so the contrast is destroyed rather than corrupted and no method recovers it.
+Reported rather than hidden.
 
 Figures in `results/figures/`: dataset sample, degradation analysis, training curve,
 and restoration examples.
