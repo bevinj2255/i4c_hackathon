@@ -268,7 +268,7 @@ def main():
 
     # 3 -- Idea ---------------------------------------------------------------
     fill(find(idea, "Provide a brief summary of your idea"),
-         "One small fully-convolutional network denoises and 2× super-resolves in a single pass, "
+         "One compact fully-convolutional network denoises and 2× super-resolves in a single pass, "
          "built on a degradation model recovered from the data rather than guessed.",
          bullet=False, size=12)
     card(idea, top=4.05, height=1.42, index=0)
@@ -308,7 +308,8 @@ def main():
         "TRAINING: 50/50 real and synthesised pairs; noise ranges widened beyond measured; 8-fold dihedral augmentation.",
         f"MODEL: {mf.get('blocks','?')} residual blocks × {mf.get('ch','?')} ch → "
         f"PixelShuffle ×2. No global skip from the noisy input. Output clamped to [0,1].",
-        "LOSS: Charbonnier blended with an LPIPS perceptual term by weight interpolation of two checkpoints.",
+        "LOSS: Charbonnier (smooth L1) for pixel accuracy, then a fine-tune adding a "
+        "frozen-AlexNet LPIPS term for perceptual quality.",
         f"STACK: {stack}.",
         f"FEASIBILITY: {mf.get('mb', 0):.0f} MB checkpoint, {a.ms_per_image} ms/image "
         f"end-to-end on a GTX 1650; runs unchanged on CPU or any NVIDIA GPU.",
@@ -329,13 +330,17 @@ def main():
     fill(find(innov, "Describe the core innovation"), [
         "Degradation recovered, not guessed — giving unlimited perfectly-matched training data.",
         "Noise SPECTRUM matched, not just variance: caught a 16% high-frequency error every variance test passed.",
-        "Perceptual/pixel weight interpolation — 93% of the LPIPS gain for 2.9% of the PSNR gain, zero extra training.",
+        "Perceptual fine-tune of a pixel-trained network: LPIPS 0.3099 → 0.1811, a 42% "
+        "cut, for 0.34 dB of PSNR. The interpolation curve between the two was measured "
+        "and showed no blend was needed.",
     ], size=11)
     fill(find(innov, "Explain how your solution is better"), [
         f"Beats bicubic on {ours.get('n', 200)}/{ours.get('n', 200)} validation images — every one, not on average.",
         f"Compact by design ({mf.get('millions',0):.1f}M params, {mf.get('mb',0):.0f} MB): "
         f"all computation at low resolution, so throughput stays high.",
-        "Ideas tested and REJECTED on evidence: 8× TTA (worsened LPIPS), synthetic-pattern training (−0.22 dB).",
+        "Three ideas tested and REJECTED on evidence: 8× TTA (worse LPIPS, 3 checkpoints), "
+        "synthetic-pattern training (−0.22 dB), longer perceptual schedule (won the "
+        "val split, lost 0.57 dB out-of-distribution).",
     ], size=11)
 
     # 6 -- Impact -------------------------------------------------------------
